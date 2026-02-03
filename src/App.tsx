@@ -14,6 +14,7 @@ const SignUp = lazy(() => import("@/pages/auth/Signup"));
 const DashboardOverview = lazy(() => import("@/pages/dashboard/Overview"));
 
 const BookingList = lazy(() => import("@/pages/dashboard/BookingList"));
+const Leads = lazy(() => import("@/pages/dashboard/Leads"));
 
 
 const LandingLayout = () => {
@@ -95,7 +96,14 @@ const router = createBrowserRouter([
           </Suspense>
         ),
       },
-      
+      {
+        path: "leads",
+        element: (
+          <Suspense fallback={<ComponentLoader />}>
+            <Leads />
+          </Suspense>
+        ),
+      },
     ],
   },
 ]);
