@@ -1,10 +1,18 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import { initGlitchTip, Sentry } from "@/lib/glitchtip";
+import ReactQueryProvider from "./lib/react-query-provider";
+import ToastProvider from "./lib/toast-provider";
+initGlitchTip();
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <ReactQueryProvider>
+      <ToastProvider />
+    <Sentry.ErrorBoundary fallback={<div>Something went wrong</div>}>
+      <App />
+    </Sentry.ErrorBoundary>
+    </ReactQueryProvider>
+  </React.StrictMode>
+);

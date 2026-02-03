@@ -4,16 +4,16 @@ import path from "path"
 import tailwindcss from "@tailwindcss/vite"
 export default defineConfig({
   plugins: [
+    tailwindcss(),
     react({
       babel: {
-        plugins: [['babel-plugin-react-compiler']],
+        plugins: [["babel-plugin-react-compiler"]],
       },
     }),
-    tailwindcss(),
   ],
-   resolve: {
+  resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(__dirname, "src"),
     },
   },
-})
+});
