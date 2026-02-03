@@ -4,6 +4,8 @@ import App from "./App";
 import { initGlitchTip, Sentry } from "@/lib/glitchtip";
 import ReactQueryProvider from "./lib/react-query-provider";
 import ToastProvider from "./lib/toast-provider";
+import "@/index.css";
+
 initGlitchTip();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
