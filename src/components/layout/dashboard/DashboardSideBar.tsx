@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import { 
   LayoutDashboard, 
   BarChart3,
+  Users,
   LogOut 
 } from "lucide-react";
 
@@ -9,7 +10,7 @@ const DashboardSidebar = () => {
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Overview", end: true },
     { to: "/dashboard/booking", icon: BarChart3, label: "BookingList" },
-   
+    { to: "/dashboard/leads", icon: Users, label: "Leads" },
   ];
 
   return (
