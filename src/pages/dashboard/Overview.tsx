@@ -1,4 +1,10 @@
-import { ArrowUpRight, Users, FileText, TrendingUp, DollarSign } from "lucide-react";
+import {
+  ArrowUpRight,
+  Users,
+  FileText,
+  TrendingUp,
+  DollarSign,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const DashboardOverview = () => {
@@ -35,21 +41,21 @@ const DashboardOverview = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard DashboardOverview</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl md:text-3xl font-bold tracking-tight">
+            Dashboard Overview
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Welcome back! Here's what's happening with your account.
           </p>
         </div>
-        <Button>
-          <ArrowUpRight className="mr-2 h-4 w-4" />
+        <Button className="w-full md:w-fit text-xs md:text-sm cursor-pointer">
+          <ArrowUpRight className="h-4 w-4" />
           Export Report
         </Button>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <div
@@ -72,9 +78,7 @@ const DashboardOverview = () => {
         ))}
       </div>
 
-      {/* Content Sections */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Recent Activity */}
         <div className="rounded-lg border bg-card p-6">
           <h3 className="mb-4 text-lg font-semibold">Recent Activity</h3>
           <div className="space-y-3">
@@ -89,7 +93,6 @@ const DashboardOverview = () => {
           </div>
         </div>
 
-        {/* Quick Actions */}
         <div className="rounded-lg border bg-card p-6">
           <h3 className="mb-4 text-lg font-semibold">Quick Actions</h3>
           <div className="grid gap-3">
