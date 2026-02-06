@@ -11,10 +11,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { bookingsData, getStatusUI, bookingStats } from "@/data/BookingData";
 import { useMemo, useState } from "react";
+import BookingModal from "@/components/layout/dashboard/booking/BookingModal";
 
-const BookingList = () => {
+const Bookings = () => {
   const [search, setSearch] = useState("");
   const [year, setYear] = useState("all");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredBookings = useMemo(() => {
     return bookingsData.filter((b) => {
@@ -46,11 +48,19 @@ const BookingList = () => {
           >
             <Download className="h-4 w-4 mr-2" /> Export
           </Button>
-          <Button className="flex-1 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button
+            className="flex-1 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={() => setIsModalOpen(true)}
+          >
             <Plus className="h-4 w-4 mr-2" /> New Booking
           </Button>
         </div>
       </div>
+
+      <BookingModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {bookingStats.map((stat) => (
@@ -215,4 +225,4 @@ const StatusRow = ({ label, status }: { label: string; status: string }) => (
   </div>
 );
 
-export default BookingList;
+export default Bookings;
