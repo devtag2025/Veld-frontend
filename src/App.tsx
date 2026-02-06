@@ -4,18 +4,19 @@ import "./App.css";
 import PageLoader from "@/components/loaders/PageLoader";
 import ComponentLoader from "@/components/loaders/ComponentLoader";
 
-
 const Header = lazy(() => import("@/components/layout/header/Header"));
 const Footer = lazy(() => import("@/components/layout/footer/Footer"));
-const DashboardLayout = lazy(() => import("@/components/layout/dashboard/DashboardLayout"));
+const DashboardLayout = lazy(
+  () => import("@/components/layout/dashboard/DashboardLayout"),
+);
 const Home = lazy(() => import("@/pages/Home"));
 const Login = lazy(() => import("@/pages/auth/Login"));
 const SignUp = lazy(() => import("@/pages/auth/Signup"));
 const DashboardOverview = lazy(() => import("@/pages/dashboard/Overview"));
 
-const BookingList = lazy(() => import("@/pages/dashboard/BookingList"));
+const Bookings = lazy(() => import("@/pages/dashboard/Bookings"));
 const Leads = lazy(() => import("@/pages/dashboard/Leads"));
-
+const Service = lazy(() => import("@/pages/dashboard/Service"));
 
 const LandingLayout = () => {
   return (
@@ -92,7 +93,7 @@ const router = createBrowserRouter([
         path: "booking",
         element: (
           <Suspense fallback={<ComponentLoader />}>
-            <BookingList />
+            <Bookings />
           </Suspense>
         ),
       },
@@ -101,6 +102,14 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<ComponentLoader />}>
             <Leads />
+          </Suspense>
+        ),
+      },
+      {
+        path: "service",
+        element: (
+          <Suspense fallback={<ComponentLoader />}>
+            <Service />
           </Suspense>
         ),
       },

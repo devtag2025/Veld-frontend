@@ -6,6 +6,7 @@ import {
   LogOut,
   Menu,
   User,
+  UserCog,
   Users,
   X,
 } from "lucide-react";
@@ -18,8 +19,9 @@ const DashboardHeader = () => {
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Overview", end: true },
-    { to: "/dashboard/booking", icon: BarChart3, label: "BookingList" },
+    { to: "/dashboard/booking", icon: BarChart3, label: "Bookings" },
     { to: "/dashboard/leads", icon: Users, label: "Leads" },
+    { to: "/dashboard/service", icon: UserCog, label: "Services" },
   ];
 
   useEffect(() => {
