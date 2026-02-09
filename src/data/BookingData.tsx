@@ -103,7 +103,7 @@ export const bookingsData: Booking[] = [
   },
   {
     id: "BK-1004",
-    clientName: "Robert Dowson",
+    clientName: "Jhon Doe",
     huntYear: "2024",
     huntDate: "Oct 10 - Oct 20",
     package: "Helicopter Cull",
