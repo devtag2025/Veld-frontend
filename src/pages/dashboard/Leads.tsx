@@ -254,7 +254,10 @@ const Leads = () => {
             <Download className="h-4 w-4" />
             Export
           </Button>
-          <Button className="w-full md:w-fit cursor-pointer" onClick={() => setIsModalOpen(true)}>
+          <Button
+            className="w-full md:w-fit cursor-pointer"
+            onClick={() => setIsModalOpen(true)}
+          >
             <Plus className="h-4 w-4" />
             Create Lead
           </Button>
@@ -469,7 +472,6 @@ const Leads = () => {
         </div>
       </div>
 
-      {/* Create Lead Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -491,7 +493,9 @@ const Leads = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Company</label>
+                <label className="block text-sm font-medium mb-1">
+                  Company
+                </label>
                 <input
                   type="text"
                   className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-2 focus:ring-primary focus:border-primary"
@@ -516,7 +520,9 @@ const Leads = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Location</label>
+                <label className="block text-sm font-medium mb-1">
+                  Location
+                </label>
                 <input
                   type="text"
                   className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-2 focus:ring-primary focus:border-primary"
@@ -526,7 +532,6 @@ const Leads = () => {
             </div>
           </div>
 
-          {/* Status */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Status
@@ -554,7 +559,9 @@ const Leads = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Subtitle</label>
+                <label className="block text-sm font-medium mb-1">
+                  Subtitle
+                </label>
                 <input
                   type="text"
                   className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-2 focus:ring-primary focus:border-primary"
