@@ -9,6 +9,7 @@ import {
   UserCog,
   Users,
   X,
+  FileText,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
@@ -22,6 +23,7 @@ const DashboardHeader = () => {
     { to: "/dashboard/booking", icon: BarChart3, label: "Bookings" },
     { to: "/dashboard/leads", icon: Users, label: "Leads" },
     { to: "/dashboard/service", icon: UserCog, label: "Services" },
+    { to: "/dashboard/contracts", icon: FileText, label: "Contracts" },
   ];
 
   useEffect(() => {

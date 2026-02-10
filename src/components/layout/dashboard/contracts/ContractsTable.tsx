@@ -1,92 +1,64 @@
 import { useState, useMemo } from "react";
 import {
-  Clock,
-  AlertCircle,
-  Calendar,
-  Mail,
-  CircleDot,
-  Eye,
-  Pencil,
   MoreVertical,
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Eye,
+  Pencil,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Lead, LeadStatus, LeadSource } from "@/data/LeadsData";
+import type { Contract } from "@/types/contract";
 
-interface LeadsTableProps {
-  data: Lead[];
+interface ContractsTableProps {
+  data: Contract[];
   currentPage: number;
   setCurrentPage: (page: number) => void;
 }
 
-type SortKey = "name" | "email" | "status" | "source" | null;
+type SortKey = "hunterName" | "huntDate" | "status" | "totalAmount" | "package" | null;
 type SortDirection = "asc" | "desc";
 
 const statusConfig: Record<
-  LeadStatus,
+  string,
   { label: string; bgColor: string; textColor: string; dotColor: string }
 > = {
-  new: {
-    label: "New",
-    bgColor: "bg-blue-50",
-    textColor: "text-blue-700",
-    dotColor: "bg-blue-500",
+  draft: {
+    label: "Draft",
+    bgColor: "bg-slate-100",
+    textColor: "text-slate-700",
+    dotColor: "bg-slate-500",
   },
-  contacted: {
-    label: "Contacted",
+  pending: {
+    label: "Pending",
     bgColor: "bg-amber-50",
     textColor: "text-amber-700",
     dotColor: "bg-amber-500",
   },
-  qualified: {
-    label: "Qualified",
-    bgColor: "bg-purple-50",
-    textColor: "text-purple-700",
-    dotColor: "bg-purple-500",
-  },
-  converted: {
-    label: "Converted",
+  signed: {
+    label: "Signed",
     bgColor: "bg-emerald-50",
     textColor: "text-emerald-700",
     dotColor: "bg-emerald-500",
   },
-};
-
-const sourceConfig: Record<
-  LeadSource,
-  { label: string; bgColor: string; textColor: string }
-> = {
-  "ai-search": {
-    label: "AI Search",
-    bgColor: "bg-purple-50",
-    textColor: "text-purple-700",
+  expired: {
+    label: "Expired",
+    bgColor: "bg-red-50",
+    textColor: "text-red-700",
+    dotColor: "bg-red-500",
   },
-  manual: {
-    label: "Manual",
-    bgColor: "bg-slate-100",
-    textColor: "text-slate-700",
-  },
-  import: {
-    label: "Import",
-    bgColor: "bg-teal-50",
-    textColor: "text-teal-700",
+  cancelled: {
+    label: "Cancelled",
+    bgColor: "bg-gray-100",
+    textColor: "text-gray-700",
+    dotColor: "bg-gray-500",
   },
 };
 
-const actionIconConfig: Record<string, { icon: typeof Clock; color: string }> =
-  {
-    urgent: { icon: AlertCircle, color: "text-red-500" },
-    warning: { icon: Clock, color: "text-amber-500" },
-    success: { icon: Calendar, color: "text-emerald-500" },
-    info: { icon: Mail, color: "text-blue-500" },
-    pending: { icon: CircleDot, color: "text-slate-400" },
-  };
-
-const LeadsTable = ({ data, currentPage, setCurrentPage }: LeadsTableProps) => {
+const ContractsTable = ({ data, currentPage, setCurrentPage }: ContractsTableProps) => {
   const [sortKey, setSortKey] = useState<SortKey>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
@@ -103,32 +75,24 @@ const LeadsTable = ({ data, currentPage, setCurrentPage }: LeadsTableProps) => {
     if (!sortKey) return data;
 
     return [...data].sort((a, b) => {
-      let aValue: string;
-      let bValue: string;
+      let aValue: any = a[sortKey as keyof Contract];
+      let bValue: any = b[sortKey as keyof Contract];
 
-      switch (sortKey) {
-        case "name":
-          aValue = a.name;
-          bValue = b.name;
-          break;
-        case "email":
-          aValue = a.email;
-          bValue = b.email;
-          break;
-        case "status":
-          aValue = a.status;
-          bValue = b.status;
-          break;
-        case "source":
-          aValue = a.source;
-          bValue = b.source;
-          break;
-        default:
-          return 0;
+      // Handle undefined values
+      if (aValue === undefined) aValue = "";
+      if (bValue === undefined) bValue = "";
+
+      if (typeof aValue === 'string') {
+          return sortDirection === "asc" 
+            ? aValue.localeCompare(bValue) 
+            : bValue.localeCompare(aValue);
       }
-
-      const comparison = aValue.localeCompare(bValue);
-      return sortDirection === "asc" ? comparison : -comparison;
+      
+      if (typeof aValue === 'number') {
+          return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+      }
+      
+      return 0;
     });
   }, [data, sortKey, sortDirection]);
 
@@ -169,47 +133,50 @@ const LeadsTable = ({ data, currentPage, setCurrentPage }: LeadsTableProps) => {
         <table className="min-w-[900px] w-full text-left border-collapse">
           <thead>
             <tr className="border-b bg-muted/50">
-              <SortableHeader columnKey="name">Lead</SortableHeader>
-              <SortableHeader columnKey="email">Contact</SortableHeader>
+              <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Contract ID
+              </th>
+              <SortableHeader columnKey="hunterName">Hunter</SortableHeader>
+              <SortableHeader columnKey="package">Package</SortableHeader>
+              <SortableHeader columnKey="huntDate">Hunt Date</SortableHeader>
               <SortableHeader columnKey="status">Status</SortableHeader>
-              <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Next Action
-              </th>
-              <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Last Activity
-              </th>
-              <SortableHeader columnKey="source">Source</SortableHeader>
+              <SortableHeader columnKey="totalAmount">Amount</SortableHeader>
               <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody className="text-sm divide-y">
-            {sortedData.map((lead) => {
-              const status = statusConfig[lead.status];
-              const source = sourceConfig[lead.source];
-              const actionIcon = actionIconConfig[lead.nextAction.type];
-              const ActionIcon = actionIcon.icon;
+            {sortedData.map((contract) => {
+              const status = statusConfig[contract.status?.toLowerCase() || 'draft'] || statusConfig.draft;
 
               return (
                 <tr
-                  key={lead.id}
+                  key={contract.id}
                   className={`hover:bg-muted/30 transition-colors group cursor-pointer`}
                 >
+                  <td className="p-4 font-medium text-xs text-muted-foreground">
+                    {contract.id}
+                  </td>
                   <td className="p-4">
                     <div className="flex flex-col items-start gap-1">
-                      <div className="font-semibold">{lead.name}</div>
+                      <div className="font-semibold">{contract.hunterName}</div>
                       <div className="text-xs text-muted-foreground">
-                        {lead.company}
+                        {contract.email}
                       </div>
                     </div>
                   </td>
                   <td className="p-4">
-                    <div className="flex flex-col gap-1">
-                      <div>{lead.email}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {lead.location}
-                      </div>
+                    <div className="text-sm">{contract.package}</div>
+                    {contract.charterOption && contract.charterOption !== 'none' && (
+                        <div className="text-xs text-muted-foreground capitalize">
+                             + {contract.charterOption.replace('_', ' ')}
+                        </div>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
+                        <span>{new Date(contract.huntDate).toLocaleDateString()}</span>
                     </div>
                   </td>
                   <td className="p-4">
@@ -222,44 +189,18 @@ const LeadsTable = ({ data, currentPage, setCurrentPage }: LeadsTableProps) => {
                       {status.label}
                     </span>
                   </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <ActionIcon className={`h-4 w-4 ${actionIcon.color}`} />
-                      <div>
-                        <div
-                          className={`text-xs font-medium ${lead.nextAction.type === "urgent" ? "font-semibold" : ""}`}
-                        >
-                          {lead.nextAction.title}
-                        </div>
-                        {lead.nextAction.subtitle && (
-                          <div
-                            className={`text-xs ${lead.nextAction.type === "urgent" ? "text-red-600 font-medium" : lead.nextAction.type === "success" && lead.status === "converted" ? "text-emerald-600" : "text-muted-foreground"}`}
-                          >
-                            {lead.nextAction.subtitle}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-muted-foreground">
-                    <div className="text-xs">{lead.lastActivity.time}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {lead.lastActivity.action}
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <span
-                      className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${source.bgColor} ${source.textColor}`}
-                    >
-                      {source.label}
-                    </span>
+                  <td className="p-4 font-medium">
+                    ${contract.totalAmount?.toLocaleString() || '0'}
                   </td>
                   <td className="p-4">
                     <div className="flex items-center justify-end gap-2 transition-opacity">
-                      <button className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border">
+                      <button className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border" title="View PDF">
+                         <FileText className="h-4 w-4" />
+                      </button>
+                      <button className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border" title="View Details">
                         <Eye className="h-4 w-4" />
                       </button>
-                      <button className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border">
+                      <button className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border" title="Edit">
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border">
@@ -278,7 +219,7 @@ const LeadsTable = ({ data, currentPage, setCurrentPage }: LeadsTableProps) => {
       <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground whitespace-nowrap">
           Showing <span className="font-medium text-foreground">1-6</span> of{" "}
-          <span className="font-medium text-foreground">62</span> leads
+          <span className="font-medium text-foreground">48</span> contracts
         </div>
         <div className="flex items-center gap-1 sm:gap-2">
           <Button variant="outline" size="sm" disabled className="px-2 sm:px-3">
@@ -311,5 +252,5 @@ const LeadsTable = ({ data, currentPage, setCurrentPage }: LeadsTableProps) => {
   );
 };
 
-export default LeadsTable;
+export default ContractsTable;
 
