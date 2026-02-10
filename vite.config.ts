@@ -11,6 +11,17 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    host: true,
+    port: 5173,
+    strictPort: true,
+    allowedHosts: [
+      '.ngrok-free.app'   // 👈 THIS is the key
+    ],
+    hmr: {
+      clientPort: 443
+    }
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
