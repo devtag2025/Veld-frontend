@@ -18,6 +18,8 @@ const Bookings = lazy(() => import("@/pages/dashboard/Bookings"));
 const Leads = lazy(() => import("@/pages/dashboard/Leads"));
 const Service = lazy(() => import("@/pages/dashboard/Service"));
 
+const Contracts = lazy(() => import("@/pages/dashboard/Contracts"));
+
 const LandingLayout = () => {
   return (
     <div className="app">
@@ -110,6 +112,14 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<ComponentLoader />}>
             <Service />
+          </Suspense>
+        ),
+      },
+      {
+        path: "contracts",
+        element: (
+          <Suspense fallback={<ComponentLoader />}>
+            <Contracts />
           </Suspense>
         ),
       },
