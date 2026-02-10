@@ -1,7 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 
-const BookingModal = ({ isOpen, onClose }) => {
+
+interface BookingModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create New Hunt Booking">
       <form className="space-y-6">

@@ -32,7 +32,8 @@ const CreateContractModal: FC<CreateContractModalProps> = ({ isOpen, onClose, co
   });
 
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const selectedPackage = watch('package');
+
+
   const selectedFirearm = watch('firearmOption');
   const selectedCharter = watch('charterOption');
 
