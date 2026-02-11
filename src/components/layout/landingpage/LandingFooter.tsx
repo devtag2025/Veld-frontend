@@ -1,6 +1,12 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
-const footerLinks = {
+interface FooterLink {
+  label: string;
+  href: string;
+  isRoute?: boolean;
+}
+
+const footerLinks: Record<string, FooterLink[]> = {
   Product: [
     { label: 'Features', href: '#features' },
     { label: 'Pricing', href: '#pricing' },
