@@ -24,6 +24,7 @@ const DashboardHeader = () => {
     { to: "/dashboard/leads", icon: Users, label: "Leads" },
     { to: "/dashboard/service", icon: UserCog, label: "Services" },
     { to: "/dashboard/contracts", icon: FileText, label: "Contracts" },
+    { to: "/dashboard/invoices", icon: FileText, label: "Invoices" },
   ];
 
   useEffect(() => {
