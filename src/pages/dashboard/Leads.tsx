@@ -30,7 +30,7 @@ const Leads = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [viewLead, setViewLead] = useState<Lead | null>(null);
 
-  const { leads, stats, loading, fetchLeads } = useLeads(statusFilter, search);
+  const { leads, stats, fetchLeads } = useLeads(statusFilter, search);
 
   const filteredLeads = leads;
 
