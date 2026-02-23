@@ -20,8 +20,8 @@ const DashboardHeader = () => {
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Overview", end: true },
-    { to: "/dashboard/booking", icon: BarChart3, label: "Bookings" },
     { to: "/dashboard/leads", icon: Users, label: "Leads" },
+    { to: "/dashboard/booking", icon: BarChart3, label: "Bookings" },
     { to: "/dashboard/service", icon: UserCog, label: "Services" },
     { to: "/dashboard/contracts", icon: FileText, label: "Contracts" },
     { to: "/dashboard/invoices", icon: FileText, label: "Invoices" },

@@ -18,6 +18,7 @@ import LeadsTable from "@/components/layout/dashboard/leads/LeadsTable";
 import LeadForm from "@/components/layout/dashboard/leads/LeadsForm";
 import { deleteLead, updateLead } from "@/api/leads.api";
 import LeadDetailsModal from "@/components/layout/dashboard/leads/LeadsDetailsModal";
+import toast from "react-hot-toast";
 
 const Leads = () => {
   const [search, setSearch] = useState("");
@@ -88,15 +89,31 @@ const Leads = () => {
   };
 
   const handleStatusChange = async (id: string, status: Lead["status"]) => {
-    await updateLead(id, { status });
-    fetchLeads();
+    try {
+      toast.loading("Updating lead...");
+      await updateLead(id, { status });
+      toast.dismiss();
+      toast.success("Lead updated successfully!");
+      fetchLeads();
+    } catch (err) {
+      toast.dismiss();
+      toast.error("Failed to update lead");
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this lead?")) return;
 
-    await deleteLead(id);
-    fetchLeads();
+    try {
+      toast.loading("Deleting lead...");
+      await deleteLead(id);
+      toast.dismiss();
+      toast.success("Lead deleted successfully!");
+      fetchLeads();
+    } catch (err) {
+      toast.dismiss();
+      toast.error("Failed to delete lead");
+    }
   };
 
   return (

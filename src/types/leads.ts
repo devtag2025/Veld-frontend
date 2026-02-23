@@ -1,9 +1,3 @@
-// src/types/lead.ts
-export interface Note {
-  note: string;
-  createdAt: string;
-}
-
 export interface FollowUp {
   action: string;
   date: string;
@@ -11,8 +5,7 @@ export interface FollowUp {
 
 export interface Activity {
   status: string;
-  note: string;
-  createdAt: string;
+  date: string;
 }
 
 export interface Lead {
@@ -24,9 +17,8 @@ export interface Lead {
   company?: string;
   huntInterest: string;
   status: "New" | "Contacted" | "Qualified" | "Converted";
-  source?: "ai-search" | "manual" | "import";
   nextAction?: { title: string; subtitle: string };
-  notes: Note[];
+  note: string;
   followUps: FollowUp[];
   activity: Activity[];
   createdAt: string;
