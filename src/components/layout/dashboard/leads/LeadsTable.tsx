@@ -15,6 +15,8 @@ interface LeadsTableProps {
 
 type Status = "New" | "Contacted" | "Qualified" | "Converted";
 
+const PAGES_PER_GROUP = 6;
+
 const statusStyles: Record<Status, string> = {
   New: "bg-blue-50 text-blue-700 border border-blue-200",
   Contacted: "bg-amber-50 text-amber-700 border border-amber-200",
@@ -101,7 +103,7 @@ const LeadsTable = ({
   onDelete,
   onStatusChange,
 }: LeadsTableProps) => {
-  const itemsPerPage = 10;
+  const itemsPerPage = 6;
   const totalPages = Math.ceil(data.length / itemsPerPage);
 
   const paginatedData = useMemo(() => {
@@ -110,12 +112,17 @@ const LeadsTable = ({
   }, [data, currentPage]);
 
   const getPages = () => {
+    const groupIndex = Math.floor((currentPage - 1) / PAGES_PER_GROUP);
+
+    const start = groupIndex * PAGES_PER_GROUP + 1;
+    const end = Math.min(start + PAGES_PER_GROUP - 1, totalPages);
+
     const pages = [];
-    const start = Math.max(1, currentPage - 2);
-    const end = Math.min(totalPages, currentPage + 2);
+
     for (let i = start; i <= end; i++) {
       pages.push(i);
     }
+
     return pages;
   };
 
@@ -170,39 +177,41 @@ const LeadsTable = ({
           of <span className="font-medium text-foreground">{data.length}</span>{" "}
           leads
         </div>
-        <div className="flex items-center gap-1 sm:gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(currentPage - 1)}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1">Previous</span>
-          </Button>
-
-          {getPages().map((page) => (
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1 sm:gap-2">
             <Button
-              key={page}
-              variant={currentPage === page ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(page)}
-              className="w-8 sm:w-9"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(currentPage - 1)}
             >
-              {page}
+              <ChevronLeft className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1">Previous</span>
             </Button>
-          ))}
 
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(currentPage + 1)}
-          >
-            <span className="hidden sm:inline mr-1">Next</span>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+            {getPages().map((page) => (
+              <Button
+                key={page}
+                variant={currentPage === page ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(page)}
+                className="w-8 sm:w-9"
+              >
+                {page}
+              </Button>
+            ))}
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(currentPage + 1)}
+            >
+              <span className="hidden sm:inline mr-1">Next</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

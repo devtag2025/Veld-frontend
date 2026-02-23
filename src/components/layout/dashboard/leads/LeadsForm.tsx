@@ -10,7 +10,7 @@ import {
   Target,
   CheckCircle2,
   Loader2,
-  StickyNote, // Added icon for notes
+  StickyNote,
 } from "lucide-react";
 import type { Lead } from "@/types/leads";
 import toast from "react-hot-toast";

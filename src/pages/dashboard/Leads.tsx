@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Inbox,
   MessageCircle,
@@ -69,6 +69,10 @@ const Leads = () => {
     },
   ];
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
+
   const handleCreate = () => {
     setSelectedLead(null);
     setIsModalOpen(true);
@@ -109,6 +113,7 @@ const Leads = () => {
       await deleteLead(id);
       toast.dismiss();
       toast.success("Lead deleted successfully!");
+      setCurrentPage(1);
       fetchLeads();
     } catch (err) {
       toast.dismiss();
