@@ -12,9 +12,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ReactQueryProvider>
       <ToastProvider />
-    <Sentry.ErrorBoundary fallback={<div>Something went wrong</div>}>
-      <App />
-    </Sentry.ErrorBoundary>
+      <Sentry.ErrorBoundary fallback={<div>Something went wrong</div>}>
+        <App />
+      </Sentry.ErrorBoundary>
     </ReactQueryProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

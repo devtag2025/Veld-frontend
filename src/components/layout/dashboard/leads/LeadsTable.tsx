@@ -1,315 +1,220 @@
-import { useState, useMemo } from "react";
-import {
-  Clock,
-  AlertCircle,
-  Calendar,
-  Mail,
-  CircleDot,
-  Eye,
-  Pencil,
-  MoreVertical,
-  ChevronLeft,
-  ChevronRight,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-} from "lucide-react";
+import { useMemo } from "react";
+import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Lead, LeadStatus, LeadSource } from "@/data/LeadsData";
+import type { Lead } from "@/types/leads";
 
 interface LeadsTableProps {
   data: Lead[];
   currentPage: number;
   setCurrentPage: (page: number) => void;
+  onEdit: (lead: Lead) => void;
+  onView: (lead: Lead) => void;
+  onDelete: (id: string) => void;
+  onStatusChange: (id: string, status: Lead["status"]) => void;
 }
 
-type SortKey = "name" | "email" | "status" | "source" | null;
-type SortDirection = "asc" | "desc";
+type Status = "New" | "Contacted" | "Qualified" | "Converted";
 
-const statusConfig: Record<
-  LeadStatus,
-  { label: string; bgColor: string; textColor: string; dotColor: string }
-> = {
-  new: {
-    label: "New",
-    bgColor: "bg-blue-50",
-    textColor: "text-blue-700",
-    dotColor: "bg-blue-500",
-  },
-  contacted: {
-    label: "Contacted",
-    bgColor: "bg-amber-50",
-    textColor: "text-amber-700",
-    dotColor: "bg-amber-500",
-  },
-  qualified: {
-    label: "Qualified",
-    bgColor: "bg-purple-50",
-    textColor: "text-purple-700",
-    dotColor: "bg-purple-500",
-  },
-  converted: {
-    label: "Converted",
-    bgColor: "bg-emerald-50",
-    textColor: "text-emerald-700",
-    dotColor: "bg-emerald-500",
-  },
+const PAGES_PER_GROUP = 6;
+
+const statusStyles: Record<Status, string> = {
+  New: "bg-blue-50 text-blue-700 border border-blue-200",
+  Contacted: "bg-amber-50 text-amber-700 border border-amber-200",
+  Qualified: "bg-purple-50 text-purple-700 border border-purple-200",
+  Converted: "bg-emerald-50 text-emerald-700 border border-emerald-200",
 };
 
-const sourceConfig: Record<
-  LeadSource,
-  { label: string; bgColor: string; textColor: string }
-> = {
-  "ai-search": {
-    label: "AI Search",
-    bgColor: "bg-purple-50",
-    textColor: "text-purple-700",
-  },
-  manual: {
-    label: "Manual",
-    bgColor: "bg-slate-100",
-    textColor: "text-slate-700",
-  },
-  import: {
-    label: "Import",
-    bgColor: "bg-teal-50",
-    textColor: "text-teal-700",
-  },
-};
+const getStatusStyle = (status: string) =>
+  statusStyles[status as Status] ||
+  "bg-gray-50 text-gray-700 border border-gray-200";
 
-const actionIconConfig: Record<string, { icon: typeof Clock; color: string }> =
-  {
-    urgent: { icon: AlertCircle, color: "text-red-500" },
-    warning: { icon: Clock, color: "text-amber-500" },
-    success: { icon: Calendar, color: "text-emerald-500" },
-    info: { icon: Mail, color: "text-blue-500" },
-    pending: { icon: CircleDot, color: "text-slate-400" },
-  };
-
-const LeadsTable = ({ data, currentPage, setCurrentPage }: LeadsTableProps) => {
-  const [sortKey, setSortKey] = useState<SortKey>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortDirection("asc");
-    }
-  };
-
-  const sortedData = useMemo(() => {
-    if (!sortKey) return data;
-
-    return [...data].sort((a, b) => {
-      let aValue: string;
-      let bValue: string;
-
-      switch (sortKey) {
-        case "name":
-          aValue = a.name;
-          bValue = b.name;
-          break;
-        case "email":
-          aValue = a.email;
-          bValue = b.email;
-          break;
-        case "status":
-          aValue = a.status;
-          bValue = b.status;
-          break;
-        case "source":
-          aValue = a.source;
-          bValue = b.source;
-          break;
-        default:
-          return 0;
-      }
-
-      const comparison = aValue.localeCompare(bValue);
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-  }, [data, sortKey, sortDirection]);
-
-  const SortIcon = ({ columnKey }: { columnKey: SortKey }) => {
-    if (sortKey !== columnKey) {
-      return <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />;
-    }
-    return sortDirection === "asc" ? (
-      <ArrowUp className="h-3 w-3 ml-1" />
-    ) : (
-      <ArrowDown className="h-3 w-3 ml-1" />
-    );
-  };
-
-  const SortableHeader = ({
-    columnKey,
-    children,
-    className = "",
-  }: {
-    columnKey: SortKey;
-    children: React.ReactNode;
-    className?: string;
-  }) => (
-    <th
-      className={`p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted/70 transition-colors select-none ${className}`}
-      onClick={() => handleSort(columnKey)}
-    >
-      <div className="flex items-center">
-        {children}
-        <SortIcon columnKey={columnKey} />
+const LeadRow = ({
+  lead,
+  onEdit,
+  onDelete,
+  onView,
+  onStatusChange,
+}: {
+  lead: Lead;
+  onEdit: (lead: Lead) => void;
+  onDelete: (id: string) => void;
+  onView: (lead: Lead) => void;
+  onStatusChange: (id: string, status: Lead["status"]) => void;
+}) => (
+  <tr key={lead._id} className="hover:bg-muted/30 transition-colors">
+    <td className="p-4">{lead.name}</td>
+    <td className="p-4">{lead.email}</td>
+    <td className="p-4">{lead.phone}</td>
+    <td className="p-4">
+      <div className="flex flex-col">
+        <span className="font-medium">{lead.company}</span>
+        <span className="text-xs text-muted-foreground">{lead.country}</span>
       </div>
-    </th>
-  );
+    </td>
+    <td className="p-4">{lead.huntInterest}</td>
+    <td className="p-4">
+      <select
+        value={lead.status}
+        onChange={(e) =>
+          onStatusChange(lead._id, e.target.value as Lead["status"])
+        }
+        className={`px-2 py-1 rounded text-xs font-medium ${getStatusStyle(
+          lead.status,
+        )}`}
+      >
+        <option value="New">New</option>
+        <option value="Contacted">Contacted</option>
+        <option value="Qualified">Qualified</option>
+        <option value="Converted">Converted</option>
+      </select>
+    </td>
+    <td className="p-4 flex justify-end gap-2">
+      <button
+        aria-label={`View ${lead.name}`}
+        onClick={() => onView(lead)}
+        className="p-2 border cursor-pointer  rounded hover:bg-muted"
+      >
+        <Eye size={16} />
+      </button>
+      <button
+        aria-label={`Edit ${lead.name}`}
+        onClick={() => onEdit(lead)}
+        className="p-2 border cursor-pointer rounded hover:bg-muted"
+      >
+        <Pencil size={16} />
+      </button>
+      <button
+        aria-label={`Delete ${lead.name}`}
+        onClick={() => onDelete(lead._id)}
+        className="p-2 border cursor-pointer rounded hover:bg-red-50 text-red-600"
+      >
+        <Trash2 size={16} />
+      </button>
+    </td>
+  </tr>
+);
+
+const LeadsTable = ({
+  data,
+  currentPage,
+  setCurrentPage,
+  onEdit,
+  onView,
+  onDelete,
+  onStatusChange,
+}: LeadsTableProps) => {
+  const itemsPerPage = 6;
+  const totalPages = Math.ceil(data.length / itemsPerPage);
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return data.slice(start, start + itemsPerPage);
+  }, [data, currentPage]);
+
+  const getPages = () => {
+    const groupIndex = Math.floor((currentPage - 1) / PAGES_PER_GROUP);
+
+    const start = groupIndex * PAGES_PER_GROUP + 1;
+    const end = Math.min(start + PAGES_PER_GROUP - 1, totalPages);
+
+    const pages = [];
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    return pages;
+  };
 
   return (
-    <div className="flex-1 overflow-auto bg-background py-4">
+    <div className="overflow-auto bg-background py-4">
       <div className="bg-card rounded-lg shadow-sm border overflow-x-auto">
-        <table className="min-w-[900px] w-full text-left border-collapse">
+        <table className="min-w-[1000px] w-full text-left border-collapse">
           <thead>
             <tr className="border-b bg-muted/50">
-              <SortableHeader columnKey="name">Lead</SortableHeader>
-              <SortableHeader columnKey="email">Contact</SortableHeader>
-              <SortableHeader columnKey="status">Status</SortableHeader>
-              <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Next Action
-              </th>
-              <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Last Activity
-              </th>
-              <SortableHeader columnKey="source">Source</SortableHeader>
-              <th className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">
-                Actions
-              </th>
+              {[
+                "Name",
+                "Email",
+                "Phone",
+                "Company",
+                "Hunt Interest",
+                "Status",
+                "Actions",
+              ].map((header) => (
+                <th
+                  key={header}
+                  className={`p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider ${
+                    header === "Actions" ? "text-right" : ""
+                  }`}
+                >
+                  {header}
+                </th>
+              ))}
             </tr>
           </thead>
-          <tbody className="text-sm divide-y">
-            {sortedData.map((lead) => {
-              const status = statusConfig[lead.status];
-              const source = sourceConfig[lead.source];
-              const actionIcon = actionIconConfig[lead.nextAction.type];
-              const ActionIcon = actionIcon.icon;
-
-              return (
-                <tr
-                  key={lead.id}
-                  className={`hover:bg-muted/30 transition-colors group cursor-pointer`}
-                >
-                  <td className="p-4">
-                    <div className="flex flex-col items-start gap-1">
-                      <div className="font-semibold">{lead.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {lead.company}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex flex-col gap-1">
-                      <div>{lead.email}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {lead.location}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${status.bgColor} ${status.textColor} border`}
-                    >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${status.dotColor} mr-1.5`}
-                      ></span>
-                      {status.label}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <ActionIcon className={`h-4 w-4 ${actionIcon.color}`} />
-                      <div>
-                        <div
-                          className={`text-xs font-medium ${lead.nextAction.type === "urgent" ? "font-semibold" : ""}`}
-                        >
-                          {lead.nextAction.title}
-                        </div>
-                        {lead.nextAction.subtitle && (
-                          <div
-                            className={`text-xs ${lead.nextAction.type === "urgent" ? "text-red-600 font-medium" : lead.nextAction.type === "success" && lead.status === "converted" ? "text-emerald-600" : "text-muted-foreground"}`}
-                          >
-                            {lead.nextAction.subtitle}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-muted-foreground">
-                    <div className="text-xs">{lead.lastActivity.time}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {lead.lastActivity.action}
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <span
-                      className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${source.bgColor} ${source.textColor}`}
-                    >
-                      {source.label}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center justify-end gap-2 transition-opacity">
-                      <button className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border">
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      <button className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border">
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border">
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+          <tbody className="divide-y text-sm">
+            {paginatedData.map((lead) => (
+              <LeadRow
+                key={lead._id}
+                lead={lead}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onView={onView}
+                onStatusChange={onStatusChange}
+              />
+            ))}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination - Responsive */}
       <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground whitespace-nowrap">
-          Showing <span className="font-medium text-foreground">1-6</span> of{" "}
-          <span className="font-medium text-foreground">62</span> leads
+          Showing{" "}
+          <span className="font-medium text-foreground">
+            {(currentPage - 1) * itemsPerPage + 1}-
+            {Math.min(currentPage * itemsPerPage, data.length)}
+          </span>{" "}
+          of <span className="font-medium text-foreground">{data.length}</span>{" "}
+          leads
         </div>
-        <div className="flex items-center gap-1 sm:gap-2">
-          <Button variant="outline" size="sm" disabled className="px-2 sm:px-3">
-            <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1">Previous</span>
-          </Button>
-          {[1, 2, 3].map((page) => (
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1 sm:gap-2">
             <Button
-              key={page}
-              variant={currentPage === page ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(page)}
-              className="w-8 sm:w-9"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(currentPage - 1)}
             >
-              {page}
+              <ChevronLeft className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1">Previous</span>
             </Button>
-          ))}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(currentPage + 1)}
-            className="px-2 sm:px-3"
-          >
-            <span className="hidden sm:inline mr-1">Next</span>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+
+            {getPages().map((page) => (
+              <Button
+                key={page}
+                variant={currentPage === page ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(page)}
+                className="w-8 sm:w-9"
+              >
+                {page}
+              </Button>
+            ))}
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(currentPage + 1)}
+            >
+              <span className="hidden sm:inline mr-1">Next</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default LeadsTable;
-
