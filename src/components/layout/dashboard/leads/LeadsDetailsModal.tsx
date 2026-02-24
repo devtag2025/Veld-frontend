@@ -59,7 +59,6 @@ const LeadDetailsModal = ({ lead, isOpen, onClose }: Props) => {
           </div>
         </div>
 
-        {/* --- 2. PROGRESS STEPPER --- */}
         <div className="px-2">
           <div className="relative flex justify-between w-full">
             <div className="absolute top-4 left-0 w-full h-[2px] bg-muted -z-10" />
@@ -104,21 +103,23 @@ const LeadDetailsModal = ({ lead, isOpen, onClose }: Props) => {
           </div>
         </div>
 
-        {/* --- 3. CTA FOR CONVERTED LEADS --- */}
-        {lead.status === "Converted" && (
+        {lead.status === "Converted" && !lead.bookingId && (
           <div className="group relative overflow-hidden bg-zinc-900 rounded-3xl p-6 text-white shadow-xl">
             <Sparkles className="absolute right-[-10px] top-[-10px] size-24 opacity-10 group-hover:rotate-12 transition-transform duration-700" />
+
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="space-y-1">
                 <h3 className="text-lg font-bold flex items-center gap-2">
-                  <PlaneTakeoff className="text-emerald-400" /> Ready for
-                  Booking
+                  <PlaneTakeoff className="text-emerald-400" />
+                  Ready for Booking
                 </h3>
+
                 <p className="text-zinc-400 text-sm">
                   All qualifications met. Transition this lead to the next
                   stage.
                 </p>
               </div>
+
               <button className="w-full md:w-auto bg-white text-black px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-zinc-100 transition-all flex items-center justify-center gap-2 shadow-lg">
                 Proceed to Booking <ArrowRight size={18} />
               </button>
@@ -126,9 +127,7 @@ const LeadDetailsModal = ({ lead, isOpen, onClose }: Props) => {
           </div>
         )}
 
-        {/* --- 4. MAIN CONTENT GRID --- */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10">
-          {/* Left Column: Essential Info */}
           <div className="md:col-span-4 space-y-8">
             <div className="space-y-4">
               <h4 className="text-[11px] font-bold uppercase text-muted-foreground tracking-[0.2em]">
@@ -169,9 +168,7 @@ const LeadDetailsModal = ({ lead, isOpen, onClose }: Props) => {
             </div>
           </div>
 
-          {/* Right Column: Activity & Notes */}
           <div className="md:col-span-8 space-y-10">
-            {/* Activity History Section */}
             <div className="space-y-6">
               <h3 className="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-foreground">
                 <Clock size={16} className="text-primary" /> Activity History
@@ -207,7 +204,6 @@ const LeadDetailsModal = ({ lead, isOpen, onClose }: Props) => {
               </div>
             </div>
 
-            {/* Notes Section */}
             <div className="space-y-4 pt-4 border-t border-border/60">
               <h3 className="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-foreground">
                 <StickyNote size={16} className="text-amber-500" /> Lead Notes
