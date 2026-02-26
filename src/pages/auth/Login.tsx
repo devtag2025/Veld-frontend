@@ -1,4 +1,32 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/stores/auth.store";
+import toast from "react-hot-toast";
+
 const Login = () => {
+  const navigate = useNavigate();
+  const { login, isLoading } = useAuthStore();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    try {
+      await login({ email, password });
+      toast.success("Login successful!");
+      navigate("/dashboard");
+    } catch (err: any) {
+      toast.error(err.message || "Login failed");
+    }
+  };
+
   return (
     <div className="w-full max-w-md space-y-8 rounded-lg border bg-card p-8 shadow-lg">
       <div className="text-center">
@@ -7,8 +35,8 @@ const Login = () => {
           Sign in to your account to continue
         </p>
       </div>
-      
-      <form className="mt-8 space-y-6">
+
+      <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
         <div className="space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium">
@@ -19,11 +47,13 @@ const Login = () => {
               name="email"
               type="email"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="mt-1 block w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               placeholder="you@example.com"
             />
           </div>
-          
+
           <div>
             <label htmlFor="password" className="block text-sm font-medium">
               Password
@@ -33,6 +63,8 @@ const Login = () => {
               name="password"
               type="password"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="mt-1 block w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               placeholder="••••••••"
             />
@@ -61,14 +93,18 @@ const Login = () => {
 
         <button
           type="submit"
-          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          disabled={isLoading}
+          className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Sign in
+          {isLoading ? "Signing in..." : "Sign in"}
         </button>
 
         <p className="text-center text-sm text-muted-foreground">
           Don't have an account?{" "}
-          <a href="/auth/signup" className="font-medium text-primary hover:underline">
+          <a
+            href="/auth/signup"
+            className="font-medium text-primary hover:underline"
+          >
             Sign up
           </a>
         </p>

@@ -4,9 +4,13 @@ import App from "./App";
 import { initGlitchTip, Sentry } from "@/lib/glitchtip";
 import ReactQueryProvider from "./lib/react-query-provider";
 import ToastProvider from "./lib/toast-provider";
+import { useAuthStore } from "@/stores/auth.store";
 import "@/index.css";
 
 initGlitchTip();
+
+// Restore auth state from localStorage on app startup
+useAuthStore.getState().initAuth();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
