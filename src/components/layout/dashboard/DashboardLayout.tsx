@@ -1,7 +1,33 @@
-import { Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { Outlet, Navigate } from "react-router-dom";
+import { useAuthStore } from "@/stores/auth.store";
+import { useBookingStore } from "@/stores/booking.store";
+import { useNotificationStore } from "@/stores/notification.store";
 import DashboardHeader from "./DashboardHeader";
 
 const DashboardLayout = () => {
+  const { isAuthenticated, initAuth } = useAuthStore();
+  const syncStatuses = useBookingStore((s) => s.syncStatuses);
+  const fetchNotifications = useNotificationStore(
+    (s) => s.fetchNotifications,
+  );
+
+  useEffect(() => {
+    initAuth();
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Per API guide: sync DocuSign statuses on app load
+      syncStatuses();
+      fetchNotifications();
+    }
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth/login" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader />

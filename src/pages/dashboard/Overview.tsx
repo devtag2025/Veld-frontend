@@ -1,40 +1,55 @@
+import { useEffect } from "react";
 import {
   ArrowUpRight,
-  Users,
   FileText,
-  TrendingUp,
   DollarSign,
+  Calendar,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useBookingStore } from "@/stores/booking.store";
+import { useNotificationStore } from "@/stores/notification.store";
 
 const DashboardOverview = () => {
+  const { bookings, fetchBookings } = useBookingStore();
+  const { notifications, unreadCount } = useNotificationStore();
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const totalBookings = bookings.length;
+  const draftCount = bookings.filter((b) => b.status === "Draft").length;
+  const confirmedCount = bookings.filter((b) => b.status === "Confirmed").length;
+  const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+
   const stats = [
     {
-      title: "Total Users",
-      value: "2,543",
-      change: "+12.5%",
-      icon: Users,
+      title: "Total Bookings",
+      value: totalBookings.toString(),
+      change: `${draftCount} drafts`,
+      icon: Calendar,
       trend: "up",
     },
     {
-      title: "Documents",
-      value: "1,234",
-      change: "+8.2%",
+      title: "Confirmed",
+      value: confirmedCount.toString(),
+      change: "Active bookings",
       icon: FileText,
       trend: "up",
     },
     {
-      title: "Growth",
-      value: "23.5%",
-      change: "+4.1%",
-      icon: TrendingUp,
+      title: "Revenue",
+      value: `$${totalRevenue.toLocaleString()}`,
+      change: "Total booking value",
+      icon: DollarSign,
       trend: "up",
     },
     {
-      title: "Revenue",
-      value: "$45,234",
-      change: "+15.3%",
-      icon: DollarSign,
+      title: "Notifications",
+      value: unreadCount.toString(),
+      change: "Unread alerts",
+      icon: Bell,
       trend: "up",
     },
   ];
@@ -80,30 +95,63 @@ const DashboardOverview = () => {
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="rounded-lg border bg-card p-6">
-          <h3 className="mb-4 text-lg font-semibold">Recent Activity</h3>
+          <h3 className="mb-4 text-lg font-semibold">Recent Notifications</h3>
           <div className="space-y-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full bg-primary" />
-                <p className="text-sm text-muted-foreground">
-                  Activity item {i} - Just now
-                </p>
-              </div>
-            ))}
+            {notifications.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No recent notifications
+              </p>
+            ) : (
+              notifications.slice(0, 5).map((n) => (
+                <div key={n._id} className="flex items-start gap-3">
+                  <div className="h-2 w-2 rounded-full bg-primary mt-1.5" />
+                  <div>
+                    <p className="text-sm">{n.message}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(n.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
         <div className="rounded-lg border bg-card p-6">
-          <h3 className="mb-4 text-lg font-semibold">Quick Actions</h3>
-          <div className="grid gap-3">
-            <Button variant="outline" className="justify-start">
-              <FileText className="mr-2 h-4 w-4" />
-              Create New Document
-            </Button>
-            <Button variant="outline" className="justify-start">
-              <Users className="mr-2 h-4 w-4" />
-              Invite Team Member
-            </Button>
+          <h3 className="mb-4 text-lg font-semibold">Recent Bookings</h3>
+          <div className="space-y-3">
+            {bookings.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No bookings yet
+              </p>
+            ) : (
+              bookings.slice(0, 5).map((b) => (
+                <div
+                  key={b._id}
+                  className="flex items-center justify-between py-2 border-b last:border-0"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{b.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(b.huntDate).toLocaleDateString()} • {b.packageType}
+                    </p>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                      b.status === "Confirmed"
+                        ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                        : b.status === "Signed"
+                          ? "text-purple-700 bg-purple-50 border-purple-200"
+                          : b.status === "Tentative"
+                            ? "text-blue-700 bg-blue-50 border-blue-200"
+                            : "text-slate-600 bg-slate-100 border-slate-200"
+                    }`}
+                  >
+                    {b.status}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
