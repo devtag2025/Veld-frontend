@@ -23,14 +23,18 @@ const statusColorMap: Record<BookingStatus, string> = {
   Tentative: "text-blue-700 bg-blue-50 border-blue-200",
   Signed: "text-purple-700 bg-purple-50 border-purple-200",
   Confirmed: "text-emerald-700 bg-emerald-50 border-emerald-200",
+  Declined: "text-orange-700 bg-orange-50 border-orange-200",
   Cancelled: "text-red-700 bg-red-50 border-red-200",
 };
+
+const SENDABLE_STATUSES: BookingStatus[] = ["Draft", "Tentative", "Declined"];
 
 const Bookings = () => {
   const {
     bookings,
     isLoading,
     fetchBookings,
+    syncStatuses,
     sendContract,
     confirmDeposit,
     deleteBooking,
@@ -43,7 +47,18 @@ const Bookings = () => {
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchBookings();
+    const loadBookings = async () => {
+      // Sync DocuSign statuses first, then fetch fresh bookings
+      const updated = await syncStatuses();
+      if (updated.length > 0) {
+        toast.success(
+          `Synced ${updated.length} contract${updated.length > 1 ? "s" : ""} — ${updated.map((u) => `${u.name}: ${u.newStatus}`).join(", ")}`,
+          { duration: 5000 },
+        );
+      }
+      await fetchBookings();
+    };
+    loadBookings();
   }, []);
 
   const filteredBookings = useMemo(() => {
@@ -213,6 +228,7 @@ const Bookings = () => {
             <option value="Tentative">Tentative</option>
             <option value="Signed">Signed</option>
             <option value="Confirmed">Confirmed</option>
+            <option value="Declined">Declined</option>
             <option value="Cancelled">Cancelled</option>
           </select>
           <Button variant="outline" size="sm" className="h-9 px-3">
@@ -297,13 +313,13 @@ const Bookings = () => {
 
                         {actionMenuId === b._id && (
                           <div className="absolute right-0 top-10 bg-card border rounded-xl shadow-lg z-20 w-48 py-1">
-                            {b.status === "Draft" && (
+                            {SENDABLE_STATUSES.includes(b.status) && (
                               <button
                                 className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2"
                                 onClick={() => handleSendContract(b._id)}
                               >
                                 <FileSignature className="h-4 w-4" />
-                                Send Contract
+                                {b.status === "Draft" ? "Send Contract" : "Resend Contract"}
                               </button>
                             )}
                             {b.status === "Signed" && (

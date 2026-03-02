@@ -3,6 +3,7 @@ export type BookingStatus =
   | "Tentative"
   | "Signed"
   | "Confirmed"
+  | "Declined"
   | "Cancelled";
 
 export type PackageType = "Standard" | "Custom";
