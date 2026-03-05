@@ -1,0 +1,296 @@
+# Velt Backend API — Integration Guide
+
+Base URL: `http://localhost:5000/api`
+
+All protected routes require `Authorization: Bearer <accessToken>` header.
+
+---
+
+## Authentication
+
+### POST `/auth/signup`
+Create a new user account.
+
+```json
+// Request
+{ "name": "Admin User", "email": "admin@example.com", "password": "SecurePass123!" }
+
+// Response 200
+{ "success": true, "message": "User created successfully", "data": { "user": { "_id": "...", "name": "Admin User", "email": "admin@example.com" }, "accessToken": "eyJhbG..." } }
+```
+
+### POST `/auth/login`
+Login and receive JWT tokens (set as httpOnly cookies + returned in body).
+
+```json
+// Request
+{ "email": "admin@example.com", "password": "SecurePass123!" }
+
+// Response 200
+{ "success": true, "message": "Login successful", "data": { "user": { "_id": "...", "name": "Admin User", "email": "admin@example.com" }, "accessToken": "eyJhbG..." } }
+```
+
+> [!IMPORTANT]
+> Save `accessToken` from the response. Pass it as `Authorization: Bearer <token>` on all protected routes.
+
+### POST `/auth/logout`
+Clears auth cookies.
+
+### POST `/auth/refresh-token`
+Get a new access token using the refresh token (from cookies or body).
+```json
+// Request (optional — uses cookie if available)
+{ "refreshToken": "eyJhbG..." }
+
+// Response 200
+{ "success": true, "data": { "accessToken": "eyJhbG..." } }
+```
+
+### POST `/auth/reset-password`
+```json
+{ "email": "admin@example.com" }
+```
+
+### POST `/auth/change-password` 🔒
+```json
+{ "oldPassword": "OldPass123!", "newPassword": "NewPass456!" }
+```
+
+---
+
+## Bookings
+
+### GET `/bookings`
+List all bookings. Optional query params: `?status=Draft&name=John`
+
+### GET `/bookings/:id`
+Get single booking by ID.
+
+### POST `/bookings`
+Create a new booking. Status defaults to `"Draft"`.
+
+```json
+// Request
+{
+  "leadId": "optional_lead_objectid",
+  "name": "John Hunter",
+  "email": "john@example.com",
+  "phone": "+1234567890",
+  "company": "Hunt Co",
+  "country": "Australia",
+  "huntInterest": "Red Stag",
+  "huntDate": "2026-06-15",
+  "packageType": "Standard",        // "Standard" | "Custom"
+  "addOns": ["Charter", "Helicopter"],
+  "firearmOptions": "Company Rifles", // "Company Rifles" | "Bringing Own"
+  "totalAmount": 25000,
+  "customFields": [
+    { "label": "Special Accommodation", "value": "Lodge upgrade" }
+  ],
+  "paymentSchedule": [              // Optional — auto-generated if omitted
+    { "label": "Initial Deposit", "amount": 5000, "dueDate": "2026-03-01" },
+    { "label": "Final Balance", "amount": 20000, "dueDate": "2026-04-15" }
+  ]
+}
+
+// Response 200
+{ "success": true, "message": "Booking created successfully", "data": { "_id": "...", "status": "Draft", "paymentSchedule": [...], ... } }
+```
+
+> [!NOTE]  
+> If `paymentSchedule` is omitted, a default is created: `$5,000 Initial Deposit` (due now) + `Final Balance` (60 days before hunt). Last payment must be ≥60 days before `huntDate`.
+
+### PUT `/bookings/:id`
+Update booking fields. Allowed fields: `name`, `email`, `phone`, `company`, `country`, `huntInterest`, `huntDate`, `packageType`, `addOns`, `firearmOptions`, `totalAmount`, `customFields`, `paymentSchedule`, `status`.
+
+```json
+// Request — update payment schedule
+{
+  "paymentSchedule": [
+    { "label": "Deposit", "amount": 5000, "dueDate": "2026-03-01" },
+    { "label": "Second Payment", "amount": 10000, "dueDate": "2026-05-01" },
+    { "label": "Final", "amount": 10000, "dueDate": "2026-07-01" }
+  ]
+}
+```
+
+### DELETE `/bookings/:id`
+Delete a booking and unlink from lead.
+
+---
+
+## DocuSign Contract Flow
+
+### Booking Status Lifecycle
+
+```
+Draft → Tentative → Signed → Confirmed
+                              ↘ Cancelled
+```
+
+| Status | Trigger |
+|:---|:---|
+| `Draft` | Booking created |
+| `Tentative` | Contract sent via DocuSign |
+| `Signed` | Client signs (detected via sync or webhook) |
+| `Confirmed` | Admin confirms deposit received |
+| `Cancelled` | Admin cancels or contract voided |
+
+### POST `/bookings/:id/send-contract` 🔒
+Generate contract from booking data and send via DocuSign. Only works on `"Draft"` bookings.
+
+```json
+// Request (optional — use a specific template)
+{ "templateId": "optional_contract_template_id" }
+
+// Response 200
+{
+  "success": true,
+  "message": "Contract sent successfully via DocuSign",
+  "data": {
+    "envelopeId": "296c2835-9db0-8f61-...",
+    "status": "Tentative",
+    "sentTo": "john@example.com"
+  }
+}
+```
+
+The contract includes: client info, hunt details, payment schedule table, custom fields, terms & conditions, and a DocuSign signature block. The generated HTML is saved in the booking's `contractHtml` field.
+
+### GET `/bookings/sync-statuses` 🔒
+**Call this on app load.** Fetches all `"Tentative"` bookings from DocuSign, updates MongoDB if contracts were signed/declined/voided.
+
+```json
+// Response 200
+{
+  "success": true,
+  "message": "Synced 1 of 2 pending contracts",
+  "data": {
+    "checked": 2,
+    "synced": 1,
+    "updated": [
+      {
+        "bookingId": "699fac...",
+        "name": "John Hunter",
+        "previousStatus": "Tentative",
+        "newStatus": "Signed",
+        "signedAt": "2026-02-26T02:28:08.973Z"
+      }
+    ]
+  }
+}
+```
+
+### GET `/bookings/:id/contract-status` 🔒
+Get real-time status of a single booking's DocuSign envelope.
+
+```json
+// Response 200
+{
+  "data": {
+    "bookingStatus": "Signed",
+    "docusignStatus": {
+      "status": "completed",
+      "sentDateTime": "2026-02-26T02:23:14.733Z",
+      "completedDateTime": "2026-02-26T02:28:08.973Z"
+    }
+  }
+}
+```
+
+### GET `/bookings/:id/contract` 🔒
+Download the signed PDF from DocuSign. Returns `application/pdf` binary.
+
+---
+
+## Payment Management
+
+### POST `/bookings/:id/confirm-deposit` 🔒
+Admin confirms deposit. Only works on `"Signed"` bookings. Marks first unpaid installment as paid, sets status to `"Confirmed"`.
+
+```json
+// Request (optional — specify which payment)
+{ "paymentIndex": 0 }
+
+// Response 200
+{
+  "data": {
+    "status": "Confirmed",
+    "confirmedAt": "2026-02-27T10:00:00.000Z",
+    "paymentSchedule": [
+      { "label": "Initial Deposit", "amount": 5000, "paid": true, "paidAt": "2026-02-27T10:00:00.000Z", "dueDate": "..." },
+      { "label": "Final Balance", "amount": 20000, "paid": false, "dueDate": "..." }
+    ]
+  }
+}
+```
+
+### PUT `/bookings/:id/payments/:paymentIndex/mark-paid` 🔒
+Mark any specific payment installment as paid. `paymentIndex` is 0-based.
+
+```json
+// Response 200
+{
+  "data": {
+    "paymentSchedule": [...],
+    "allPaymentsComplete": false
+  }
+}
+```
+
+---
+
+## Notifications
+
+### GET `/bookings/notifications/all` 🔒
+Get all unread notifications across all bookings (sorted newest first).
+
+```json
+// Response 200
+{
+  "data": {
+    "notifications": [
+      {
+        "_id": "...",
+        "bookingId": "...",
+        "bookingName": "John Hunter",
+        "type": "contract_signed",
+        "message": "Contract signed by John Hunter (john@example.com).",
+        "createdAt": "2026-02-26T02:28:08.973Z"
+      }
+    ],
+    "count": 1
+  }
+}
+```
+
+Notification types: `contract_sent`, `contract_signed`, `contract_declined`, `contract_voided`, `deposit_confirmed`, `payment_received`
+
+### PUT `/bookings/notifications/:notificationId/read` 🔒
+Mark a notification as read.
+
+---
+
+## Webhooks (Server-Side Only)
+
+### POST `/webhooks/docusign`
+DocuSign Connect webhook. **Not called by frontend** — called by DocuSign servers when envelope status changes. Validated via HMAC-SHA256. Automatically updates booking status and pushes notifications.
+
+---
+
+## Typical Integration Flow
+
+```
+1. POST /auth/login                          → get accessToken
+2. GET  /bookings/sync-statuses              → sync DocuSign statuses on app load
+3. GET  /bookings                            → load all bookings
+4. POST /bookings                            → create booking (Draft)
+5. PUT  /bookings/:id                        → admin edits fields/schedule
+6. POST /bookings/:id/send-contract          → send to DocuSign (Tentative)
+7. GET  /bookings/sync-statuses              → check if client signed (Signed)
+8. POST /bookings/:id/confirm-deposit        → confirm payment (Confirmed)
+9. PUT  /bookings/:id/payments/1/mark-paid   → mark later payments
+10. GET /bookings/:id/contract               → download signed PDF
+```
+
+🔒 = Requires `Authorization: Bearer <accessToken>` header

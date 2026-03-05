@@ -1,40 +1,37 @@
 import type { Lead } from "@/types/leads";
-import axios from "axios";
-
-const BASE_URL = import.meta.env.VITE_BACKEND_URL;
-const API_URL = `${BASE_URL}/leads`;
+import http from "@/lib/httpClient";
 
 // Get all leads with optional filters
 export const getLeads = async (status?: string, name?: string) => {
-  const params: any = {};
+  const params: Record<string, string> = {};
   if (status) params.status = status;
   if (name) params.name = name;
 
-  const { data } = await axios.get(API_URL, { params });
+  const { data } = await http.get("/leads", { params });
   return data.data as Lead[];
 };
 
 // Get single lead
 export const getLead = async (id: string) => {
-  const { data } = await axios.get(`${API_URL}/${id}`);
+  const { data } = await http.get(`/leads/${id}`);
   return data.data as Lead;
 };
 
 // Create lead
 export const createLead = async (lead: Partial<Lead>) => {
-  const { data } = await axios.post(API_URL, lead);
+  const { data } = await http.post("/leads", lead);
   return data.data as Lead;
 };
 
 // Update lead
 export const updateLead = async (id: string, lead: Partial<Lead>) => {
-  const { data } = await axios.put(`${API_URL}/${id}`, lead);
+  const { data } = await http.put(`/leads/${id}`, lead);
   return data.data as Lead;
 };
 
 // Delete lead
 export const deleteLead = async (id: string) => {
-  const { data } = await axios.delete(`${API_URL}/${id}`);
+  const { data } = await http.delete(`/leads/${id}`);
   return data.message;
 };
 
