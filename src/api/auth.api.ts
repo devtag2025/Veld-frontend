@@ -26,12 +26,17 @@ export const refreshToken = async () => {
   return data;
 };
 
-export const resetPassword = async (email: string) => {
-  const { data } = await http.post("/auth/reset-password", { email });
+export const changePassword = async (payload: ChangePasswordPayload) => {
+  const { data } = await http.post("/auth/change-password", payload);
   return data;
 };
 
-export const changePassword = async (payload: ChangePasswordPayload) => {
-  const { data } = await http.post("/auth/change-password", payload);
+export const forgotPassword = async (email: string) => {
+  const { data } = await http.post("/auth/forgot-password", { email });
+  return data;
+};
+
+export const resetPassword = async (token: string, password: string) => {
+  const { data } = await http.post("/auth/reset-password", { token, password });
   return data;
 };

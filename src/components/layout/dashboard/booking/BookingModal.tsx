@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useBookingStore } from "@/stores/booking.store";
+import type { Lead } from "@/types/leads";
 import toast from "react-hot-toast";
 
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
+  leadData?: Lead | null;
+  onBookingCreated?: () => void;
 }
 
-const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
+const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingModalProps) => {
   const { createBooking, isLoading } = useBookingStore();
 
   const [name, setName] = useState("");
@@ -19,13 +22,24 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
   const [country, setCountry] = useState("");
   const [huntInterest, setHuntInterest] = useState("");
   const [huntDate, setHuntDate] = useState("");
-  const [packageType, setPackageType] = useState<"Standard" | "Custom">(
-    "Standard",
-  );
-  const [firearmOptions, setFirearmOptions] = useState<
-    "Company Rifles" | "Bringing Own"
-  >("Company Rifles");
+  const [firearmOptions, setFirearmOptions] = useState<"Company Rifles" | "Bringing Own">("Company Rifles");
   const [totalAmount, setTotalAmount] = useState("");
+  const [note, setNote] = useState("");
+
+  const isFromLead = !!leadData;
+
+  // Pre-fill fields from lead data when modal opens
+  useEffect(() => {
+    if (isOpen && leadData) {
+      setName(leadData.name || "");
+      setEmail(leadData.email || "");
+      setPhone(leadData.phone || "");
+      setCompany(leadData.company || "");
+      setCountry(leadData.country || "");
+      setHuntInterest(leadData.huntInterest || "");
+      setNote(leadData.note || "");
+    }
+  }, [isOpen, leadData]);
 
   const resetForm = () => {
     setName("");
@@ -35,9 +49,14 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
     setCountry("");
     setHuntInterest("");
     setHuntDate("");
-    setPackageType("Standard");
     setFirearmOptions("Company Rifles");
     setTotalAmount("");
+    setNote("");
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,6 +69,7 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
 
     try {
       await createBooking({
+        leadId: leadData?._id || undefined,
         name,
         email,
         phone,
@@ -57,12 +77,14 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
         country: country || undefined,
         huntInterest: huntInterest || undefined,
         huntDate,
-        packageType,
+        packageType: "",
         firearmOptions,
         totalAmount: Number(totalAmount),
+        note: note || undefined,
       });
       toast.success("Booking created successfully!");
       resetForm();
+      onBookingCreated?.();
       onClose();
     } catch (err: any) {
       toast.error(err.message || "Failed to create booking");
@@ -70,12 +92,19 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create New Hunt Booking">
+    <Modal isOpen={isOpen} onClose={handleClose} title={isFromLead ? "Convert Lead to Booking" : "Create New Hunt Booking"}>
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div className="space-y-3">
           <h3 className="text-xs font-bold text-primary uppercase tracking-widest">
             Client Information
           </h3>
+
+          {isFromLead && (
+            <p className="text-xs text-muted-foreground bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
+              Pre-filled from lead record. Complete the booking details below.
+            </p>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-bold mb-1 uppercase text-muted-foreground">
@@ -86,7 +115,8 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none"
+                readOnly={isFromLead}
+                className={`w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none ${isFromLead ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
                 placeholder="e.g. John Hunter"
               />
             </div>
@@ -99,7 +129,8 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none"
+                readOnly={isFromLead}
+                className={`w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none ${isFromLead ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
                 placeholder="john@example.com"
               />
             </div>
@@ -112,7 +143,8 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none"
+                readOnly={isFromLead}
+                className={`w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none ${isFromLead ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
                 placeholder="+1234567890"
               />
             </div>
@@ -124,7 +156,8 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                 type="text"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
-                className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none"
+                readOnly={isFromLead}
+                className={`w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none ${isFromLead ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
                 placeholder="Hunt Co"
               />
             </div>
@@ -136,7 +169,8 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                 type="text"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none"
+                readOnly={isFromLead}
+                className={`w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none ${isFromLead ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
                 placeholder="Australia"
               />
             </div>
@@ -148,7 +182,8 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                 type="text"
                 value={huntInterest}
                 onChange={(e) => setHuntInterest(e.target.value)}
-                className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none"
+                readOnly={isFromLead}
+                className={`w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none ${isFromLead ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
                 placeholder="e.g. Red Stag"
               />
             </div>
@@ -174,18 +209,17 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
             </div>
             <div>
               <label className="block text-[11px] font-bold mb-1 uppercase text-muted-foreground">
-                Package Type
+                Total Amount ($) *
               </label>
-              <select
-                value={packageType}
-                onChange={(e) =>
-                  setPackageType(e.target.value as "Standard" | "Custom")
-                }
-                className="w-full bg-background border rounded-lg text-sm py-2 px-3 outline-none"
-              >
-                <option value="Standard">Standard</option>
-                <option value="Custom">Custom</option>
-              </select>
+              <input
+                type="number"
+                required
+                value={totalAmount}
+                onChange={(e) => setTotalAmount(e.target.value)}
+                className="w-full bg-background border rounded-lg text-sm py-2 px-3 outline-none focus:ring-1 focus:ring-primary"
+                placeholder="25000"
+                min={0}
+              />
             </div>
             <div>
               <label className="block text-[11px] font-bold mb-1 uppercase text-muted-foreground">
@@ -204,28 +238,27 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                 <option value="Bringing Own">Bringing Own</option>
               </select>
             </div>
-            <div>
-              <label className="block text-[11px] font-bold mb-1 uppercase text-muted-foreground">
-                Total Amount ($) *
-              </label>
-              <input
-                type="number"
-                required
-                value={totalAmount}
-                onChange={(e) => setTotalAmount(e.target.value)}
-                className="w-full bg-background border rounded-lg text-sm py-2 px-3 outline-none"
-                placeholder="25000"
-                min={0}
-              />
-            </div>
           </div>
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="text-xs font-bold text-primary uppercase tracking-widest">
+            Internal Notes
+          </h3>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={3}
+            className="w-full bg-background border rounded-lg text-sm py-2 px-3 outline-none focus:ring-1 focus:ring-primary resize-none"
+            placeholder="Add any internal notes about this booking..."
+          />
         </div>
 
         <div className="flex justify-end gap-3 pt-6 border-t">
           <Button
             type="button"
             variant="outline"
-            onClick={onClose}
+            onClick={handleClose}
             className="cursor-pointer"
           >
             Cancel

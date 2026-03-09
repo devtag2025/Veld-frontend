@@ -18,12 +18,13 @@ const About = lazy(() => import("@/pages/About"));
 const Contact = lazy(() => import("@/pages/Contact"));
 const Login = lazy(() => import("@/pages/auth/Login"));
 const SignUp = lazy(() => import("@/pages/auth/Signup"));
+const ResetPassword = lazy(() => import("@/pages/auth/ResetPassword"));
 const DashboardOverview = lazy(() => import("@/pages/dashboard/Overview"));
 const Bookings = lazy(() => import("@/pages/dashboard/Bookings"));
+const BookingDetails = lazy(() => import("@/pages/dashboard/BookingDetails"));
 const Leads = lazy(() => import("@/pages/dashboard/Leads"));
-const Service = lazy(() => import("@/pages/dashboard/Service"));
-const Contracts = lazy(() => import("@/pages/dashboard/Contracts"));
-const Invoices = lazy(() => import("@/pages/dashboard/Invoices"));
+const Notifications = lazy(() => import("@/pages/dashboard/Notifications"));
+const Settings = lazy(() => import("@/pages/dashboard/Settings"));
 
 const LandingLayout = () => {
   return (
@@ -93,6 +94,10 @@ const router = createBrowserRouter([
         path: "signup",
         element: <SignUp />,
       },
+      {
+        path: "reset-password",
+        element: <ResetPassword />,
+      },
     ],
   },
   {
@@ -116,6 +121,14 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "booking/:id",
+        element: (
+          <Suspense fallback={<ComponentLoader />}>
+            <BookingDetails />
+          </Suspense>
+        ),
+      },
+      {
         path: "leads",
         element: (
           <Suspense fallback={<ComponentLoader />}>
@@ -124,26 +137,18 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "service",
+        path: "notifications",
         element: (
           <Suspense fallback={<ComponentLoader />}>
-            <Service />
+            <Notifications />
           </Suspense>
         ),
       },
       {
-        path: "contracts",
+        path: "settings",
         element: (
           <Suspense fallback={<ComponentLoader />}>
-            <Contracts />
-          </Suspense>
-        ),
-      },
-      {
-        path: "invoices",
-        element: (
-          <Suspense fallback={<ComponentLoader />}>
-            <Invoices />
+            <Settings />
           </Suspense>
         ),
       },

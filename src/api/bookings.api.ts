@@ -100,3 +100,13 @@ export const markPaymentPaid = async (
   );
   return data;
 };
+
+export const sendPaymentReminder = async (
+  id: string,
+  paymentIndex: number,
+) => {
+  const { data } = await http.post(
+    `/bookings/${id}/payments/${paymentIndex}/send-reminder`,
+  );
+  return data;
+};

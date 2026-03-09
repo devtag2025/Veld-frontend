@@ -25,7 +25,7 @@ export interface AuthResponse {
 }
 
 export interface ChangePasswordPayload {
-  oldPassword: string;
+  currentPassword: string;
   newPassword: string;
 }
 

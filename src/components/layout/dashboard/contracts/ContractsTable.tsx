@@ -7,11 +7,13 @@ import {
   ArrowUp,
   ArrowDown,
   Eye,
-  Pencil,
+  Plus,
   FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Contract } from "@/types/contract";
+import CreateContractModal from "./CreateContractModal";
+import toast from "react-hot-toast";
 
 interface ContractsTableProps {
   data: Contract[];
@@ -61,6 +63,22 @@ const statusConfig: Record<
 const ContractsTable = ({ data, currentPage, setCurrentPage }: ContractsTableProps) => {
   const [sortKey, setSortKey] = useState<SortKey>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+
+  const handleOpenModal = (contract: Contract) => {
+    setSelectedContract(contract);
+    setIsModalOpen(true);
+  };
+
+  const handleView = (contract: Contract) => {
+    if (contract.status?.toLowerCase() === 'draft') {
+      handleOpenModal(contract);
+    } else {
+      toast.success(`Viewing ${contract.status || 'contract'} details`);
+    }
+  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -197,11 +215,15 @@ const ContractsTable = ({ data, currentPage, setCurrentPage }: ContractsTablePro
                       <button className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border" title="View PDF">
                          <FileText className="h-4 w-4" />
                       </button>
-                      <button className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border" title="View Details">
+                      <button 
+                         onClick={() => handleView(contract)}
+                         className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border" title="View Details">
                         <Eye className="h-4 w-4" />
                       </button>
-                      <button className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border" title="Edit">
-                        <Pencil className="h-4 w-4" />
+                      <button 
+                        onClick={() => handleOpenModal(contract)}
+                        className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border" title="Create/Edit Contract">
+                        <Plus className="h-4 w-4" />
                       </button>
                       <button className="p-1.5 cursor-pointer hover:bg-primary hover:text-background rounded text-muted-foreground border">
                         <MoreVertical className="h-4 w-4" />
@@ -248,6 +270,12 @@ const ContractsTable = ({ data, currentPage, setCurrentPage }: ContractsTablePro
           </Button>
         </div>
       </div>
+      
+      <CreateContractModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        contract={selectedContract} 
+      />
     </div>
   );
 };
