@@ -9,7 +9,6 @@ import {
   Globe,
   ShieldCheck,
   StickyNote,
-  DollarSign,
   FileSignature,
   Download,
   CheckCircle2,
@@ -94,7 +93,7 @@ const BookingDetails = () => {
   const currentStepIndex = statusSteps.indexOf(booking.status);
   const canEditPayments = ["Draft", "Tentative"].includes(booking.status);
   const canSendContract = ["Draft", "Tentative", "Declined"].includes(booking.status);
-  const canConfirmDeposit = booking.status === "Signed";
+  //const canConfirmDeposit = booking.status === "Signed";
   const canDownload = ["Signed", "Confirmed"].includes(booking.status);
   const canMarkPayments = ["Signed", "Confirmed"].includes(booking.status);
 
@@ -208,18 +207,18 @@ const BookingDetails = () => {
     }
   };
 
-  const handleConfirmDeposit = async () => {
-    try {
-      toast.loading("Confirming deposit...");
-      await confirmDeposit(booking._id);
-      toast.dismiss();
-      toast.success("Deposit confirmed! Confirmation email sent.");
-      fetchBooking();
-    } catch {
-      toast.dismiss();
-      toast.error("Failed to confirm deposit");
-    }
-  };
+  // const handleConfirmDeposit = async () => {
+  //   try {
+  //     toast.loading("Confirming deposit...");
+  //     await confirmDeposit(booking._id);
+  //     toast.dismiss();
+  //     toast.success("Deposit confirmed! Confirmation email sent.");
+  //     fetchBooking();
+  //   } catch {
+  //     toast.dismiss();
+  //     toast.error("Failed to confirm deposit");
+  //   }
+  // };
 
   const handleDownload = async () => {
     try {
