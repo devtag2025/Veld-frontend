@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/stores/booking.store";
-import type { Booking, BookingStatus, PaymentScheduleItem } from "@/types/booking";
+import type { Booking, BookingStatus } from "@/types/booking";
 import * as bookingsApi from "@/api/bookings.api";
 import toast from "react-hot-toast";
 
@@ -38,7 +38,7 @@ const statusSteps: BookingStatus[] = ["Draft", "Tentative", "Signed", "Confirmed
 const BookingDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { sendContract, confirmDeposit, downloadContract, markPaymentPaid } =
+  const { sendContract, downloadContract, markPaymentPaid } =
     useBookingStore();
 
   const [booking, setBooking] = useState<Booking | null>(null);
