@@ -12,6 +12,7 @@ export interface Notification {
   bookingName: string;
   type: NotificationType;
   message: string;
+  read?: boolean;
   createdAt: string;
 }
 

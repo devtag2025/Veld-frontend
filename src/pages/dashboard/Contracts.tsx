@@ -5,6 +5,7 @@ import ContractTemplateManager from '../../components/layout/dashboard/contracts
 import { Download, Plus, Search, Filter, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ContractsData } from '@/data/ContractsData';
+import CreateTemplateModal from '../../components/layout/dashboard/contracts/CreateTemplateModal';
 
 type TabType = 'contracts' | 'templates';
 
@@ -14,6 +15,7 @@ const Contracts: FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [packageFilter, setPackageFilter] = useState('');
+  const [isCreateTemplateModalOpen, setIsCreateTemplateModalOpen] = useState(false);
 
   return (
     <div>
@@ -30,12 +32,11 @@ const Contracts: FC = () => {
             Export
           </Button>
           <Button
-            className="w-full md:w-fit cursor-not-allowed opacity-50"
-            disabled
-            // onClick={() => setIsCreateModalOpen(true)}
+            className="w-full md:w-fit cursor-pointer"
+            onClick={() => setIsCreateTemplateModalOpen(true)}
           >
             <Plus className="h-4 w-4" />
-            Create Contract
+            Create Template
           </Button>
         </div>
       </header>
@@ -128,6 +129,10 @@ const Contracts: FC = () => {
         )}
       </div>
 
+      <CreateTemplateModal
+        isOpen={isCreateTemplateModalOpen}
+        onClose={() => setIsCreateTemplateModalOpen(false)}
+      />
     </div>
   );
 };

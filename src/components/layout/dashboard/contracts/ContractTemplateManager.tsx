@@ -1,80 +1,16 @@
-import { useState, useEffect, type FC } from 'react';
-import { FileText } from 'lucide-react';
-import toast from 'react-hot-toast';
-
-interface Template {
-  id: string;
-  name: string;
-  description: string;
-  version: string;
-  isDefault: boolean;
-  createdAt: string;
-  lastModified: string;
-  usageCount: number;
-  status: 'active' | 'inactive' | 'archived';
-  content?: string;
-  includePaymentTerms?: boolean;
-  includeFirearmSection?: boolean;
-  includeCharterSection?: boolean;
-  includeTrophySection?: boolean;
-  customSections?: any[];
-}
+import { useEffect, type FC } from 'react';
+import { FileText, Save } from 'lucide-react';
+import { useContractTemplateStore } from '@/stores/contractTemplate.store';
+import { Button } from '@/components/ui/button';
 
 const ContractTemplateManager: FC = () => {
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const { templates, fetchTemplates, seedDefaultTemplate, isLoading } = useContractTemplateStore();
 
   useEffect(() => {
     fetchTemplates();
-  }, []);
+  }, [fetchTemplates]);
 
-  const fetchTemplates = async () => {
-    try {
-      // Replace with actual API call
-      // const response = await axios.get('/api/contracts/templates');
-      
-      // Mock data
-      const mockTemplates: Template[] = [
-        {
-          id: 'TPL-001',
-          name: 'Default Hunt Contract',
-          description: 'Standard contract for regular hunt bookings',
-          version: '1.0',
-          isDefault: true,
-          createdAt: '2026-01-01',
-          lastModified: '2026-01-15',
-          usageCount: 45,
-          status: 'active'
-        },
-        {
-          id: 'TPL-002',
-          name: 'Premium Hunt Contract',
-          description: 'Contract for premium package hunts with helicopter charter',
-          version: '1.2',
-          isDefault: false,
-          createdAt: '2026-01-05',
-          lastModified: '2026-01-20',
-          usageCount: 12,
-          status: 'active'
-        },
-        {
-          id: 'TPL-003',
-          name: 'Custom Hunt Contract',
-          description: 'Customizable contract template for special requests',
-          version: '1.0',
-          isDefault: false,
-          createdAt: '2026-01-10',
-          lastModified: '2026-01-10',
-          usageCount: 5,
-          status: 'active'
-        }
-      ];
 
-      setTemplates(mockTemplates);
-    } catch (error) {
-      console.error('Error fetching templates:', error);
-      toast.error('Failed to load templates');
-    }
-  };
 
   return (
     <div>
@@ -85,41 +21,44 @@ const ContractTemplateManager: FC = () => {
             View available contract templates for different hunt packages
           </p>
         </div>
+        <Button 
+          variant="secondary"
+          className="cursor-pointer"
+          onClick={() => seedDefaultTemplate()}
+          disabled={isLoading}
+        >
+          <Save className="w-4 h-4 mr-2"/> Seed Default Template
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {templates.map((template) => (
           <div
-            key={template.id}
-            className="bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200"
+            key={template._id || template.id}
+            className="bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200 flex flex-col justify-between"
           >
             <div className="p-6">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center">
                   <div className="bg-blue-100 rounded-lg p-3">
                     <FileText className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="ml-4">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {template.name}
+                    <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                      <span className="truncate max-w-[150px] sm:max-w-[200px]" title={template.name}>{template.name}</span>
                       {template.isDefault && (
-                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 shrink-0">
                           Default
                         </span>
                       )}
                     </h3>
-                    <p className="text-sm text-gray-500">v{template.version}</p>
                   </div>
                 </div>
               </div>
 
-              <p className="mt-4 text-sm text-gray-600">
-                {template.description}
-              </p>
-
-              <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-                <span>Used {template.usageCount} times</span>
-                <span>Modified {new Date(template.lastModified).toLocaleDateString()}</span>
+              <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-gray-500 gap-2">
+                <span>Created: {new Date(template.createdAt).toLocaleDateString()}</span>
+                <span>Modified: {new Date(template.updatedAt).toLocaleDateString()}</span>
               </div>
             </div>
           </div>

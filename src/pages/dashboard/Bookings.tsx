@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   Download,
@@ -40,6 +41,8 @@ const Bookings = () => {
     deleteBooking,
     downloadContract,
   } = useBookingStore();
+
+  const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -181,12 +184,12 @@ const Bookings = () => {
           </p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
-          <Button
+          {/* <Button
             variant="outline"
             className="flex-1 cursor-pointer hover:bg-slate-50"
           >
             <Download className="h-4 w-4 mr-2" /> Export
-          </Button>
+          </Button> */}
           <Button
             className="flex-1 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={() => setIsModalOpen(true)}
@@ -297,7 +300,10 @@ const Bookings = () => {
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-1 relative">
-                        <button className="p-2 border border-input rounded-lg hover:bg-primary hover:text-white transition-colors cursor-pointer bg-card">
+                        <button
+                          className="p-2 border border-input rounded-lg hover:bg-primary hover:text-white transition-colors cursor-pointer bg-card"
+                          onClick={() => navigate(`/dashboard/booking/${b._id}`)}
+                        >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button

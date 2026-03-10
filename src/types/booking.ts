@@ -6,7 +6,7 @@ export type BookingStatus =
   | "Declined"
   | "Cancelled";
 
-export type PackageType = "Standard" | "Custom";
+export type PackageType = string;
 export type FirearmOption = "Company Rifles" | "Bringing Own";
 
 export interface PaymentScheduleItem {
@@ -20,6 +20,13 @@ export interface PaymentScheduleItem {
 export interface CustomField {
   label: string;
   value: string;
+}
+
+export interface BookingNotification {
+  type: string;
+  message: string;
+  read?: boolean;
+  createdAt: string;
 }
 
 export interface Booking {
@@ -39,9 +46,11 @@ export interface Booking {
   customFields?: CustomField[];
   paymentSchedule: PaymentScheduleItem[];
   status: BookingStatus;
+  note?: string;
   contractHtml?: string;
   envelopeId?: string;
   confirmedAt?: string;
+  notifications?: BookingNotification[];
   createdAt: string;
   updatedAt: string;
 }
@@ -61,6 +70,7 @@ export interface CreateBookingPayload {
   totalAmount: number;
   customFields?: CustomField[];
   paymentSchedule?: Omit<PaymentScheduleItem, "paid" | "paidAt">[];
+  note?: string;
 }
 
 export type UpdateBookingPayload = Partial<CreateBookingPayload> & {

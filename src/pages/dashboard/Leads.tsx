@@ -4,7 +4,6 @@ import {
   MessageCircle,
   BadgeCheck,
   CheckCircle2,
-  Download,
   Plus,
 } from "lucide-react";
 
@@ -18,6 +17,7 @@ import LeadsTable from "@/components/layout/dashboard/leads/LeadsTable";
 import LeadForm from "@/components/layout/dashboard/leads/LeadsForm";
 import { deleteLead, updateLead } from "@/api/leads.api";
 import LeadDetailsModal from "@/components/layout/dashboard/leads/LeadsDetailsModal";
+import BookingModal from "@/components/layout/dashboard/booking/BookingModal";
 import toast from "react-hot-toast";
 
 const Leads = () => {
@@ -30,9 +30,14 @@ const Leads = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [viewLead, setViewLead] = useState<Lead | null>(null);
 
+  // Lead-to-Booking conversion state
+  const [bookingLead, setBookingLead] = useState<Lead | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+
   const { leads, stats, fetchLeads } = useLeads(statusFilter, search);
 
-  const filteredLeads = leads;
+  // Filter out leads that have already been converted to a booking
+  const filteredLeads = leads.filter((l) => !l.bookingId);
 
   const statsConfig = [
     {
@@ -121,6 +126,17 @@ const Leads = () => {
     }
   };
 
+  const handleProceedToBooking = (lead: Lead) => {
+    setBookingLead(lead);
+    setIsBookingModalOpen(true);
+  };
+
+  const handleBookingCreated = () => {
+    setIsBookingModalOpen(false);
+    setBookingLead(null);
+    fetchLeads();
+  };
+
   return (
     <div className="space-y-4">
       <header className="bg-card py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -132,10 +148,10 @@ const Leads = () => {
         </div>
 
         <div className="flex gap-3">
-          <Button variant="outline">
+          {/* <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export
-          </Button>
+          </Button> */}
 
           <Button onClick={handleCreate}>
             <Plus className="h-4 w-4 mr-2" />
@@ -189,6 +205,17 @@ const Leads = () => {
         lead={viewLead}
         isOpen={!!viewLead}
         onClose={() => setViewLead(null)}
+        onProceedToBooking={handleProceedToBooking}
+      />
+
+      <BookingModal
+        isOpen={isBookingModalOpen}
+        onClose={() => {
+          setIsBookingModalOpen(false);
+          setBookingLead(null);
+        }}
+        leadData={bookingLead}
+        onBookingCreated={handleBookingCreated}
       />
 
       <Modal

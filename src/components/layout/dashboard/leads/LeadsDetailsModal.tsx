@@ -20,6 +20,7 @@ interface Props {
   lead: Lead | null;
   isOpen: boolean;
   onClose: () => void;
+  onProceedToBooking?: (lead: Lead) => void;
 }
 
 const statusMessages: Record<string, string> = {
@@ -29,7 +30,7 @@ const statusMessages: Record<string, string> = {
   Converted: "Successfully converted into a customer.",
 };
 
-const LeadDetailsModal = ({ lead, isOpen, onClose }: Props) => {
+const LeadDetailsModal = ({ lead, isOpen, onClose, onProceedToBooking }: Props) => {
   if (!lead) return null;
 
   const steps = ["New", "Contacted", "Qualified", "Converted"];
@@ -120,7 +121,13 @@ const LeadDetailsModal = ({ lead, isOpen, onClose }: Props) => {
                 </p>
               </div>
 
-              <button className="w-full md:w-auto bg-white text-black px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-zinc-100 transition-all flex items-center justify-center gap-2 shadow-lg">
+              <button
+                className="w-full md:w-auto bg-white text-black px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-zinc-100 transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                onClick={() => {
+                  onProceedToBooking?.(lead);
+                  onClose();
+                }}
+              >
                 Proceed to Booking <ArrowRight size={18} />
               </button>
             </div>

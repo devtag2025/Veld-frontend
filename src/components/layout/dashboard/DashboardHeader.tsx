@@ -4,16 +4,15 @@ import { useNotificationStore } from "@/stores/notification.store";
 import {
   BarChart3,
   Bell,
+  ChevronDown,
   LayoutDashboard,
   LogOut,
   Menu,
-  User,
-  UserCog,
+  Settings,
   Users,
   X,
-  FileText,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
 const DashboardHeader = () => {
@@ -24,14 +23,17 @@ const DashboardHeader = () => {
   const { logout, user } = useAuthStore();
   const { unreadCount, notifications, markAsRead } = useNotificationStore();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Overview", end: true },
     { to: "/dashboard/leads", icon: Users, label: "Leads" },
     { to: "/dashboard/booking", icon: BarChart3, label: "Bookings" },
-    { to: "/dashboard/service", icon: UserCog, label: "Services" },
-    { to: "/dashboard/contracts", icon: FileText, label: "Contracts" },
-    { to: "/dashboard/invoices", icon: FileText, label: "Invoices" },
+    { to: "/dashboard/notifications", icon: Bell, label: "Notifications" },
+    { to: "/dashboard/settings", icon: Settings, label: "Settings" },
   ];
 
   useEffect(() => {
@@ -41,6 +43,20 @@ const DashboardHeader = () => {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   const handleLogout = async () => {
@@ -74,6 +90,7 @@ const DashboardHeader = () => {
               key={item.to}
               to={item.to}
               end={item.end}
+              onClick={() => setIsSidebarOpen(false)}
               className={({ isActive }) =>
                 `relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                   isActive
@@ -84,16 +101,13 @@ const DashboardHeader = () => {
             >
               <item.icon className="h-5 w-5" />
               <span>{item.label}</span>
+              {item.label === "Notifications" && unreadCount > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </NavLink>
           ))}
-
-          <button
-            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer w-full"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Logout</span>
-          </button>
         </nav>
       </aside>
 
@@ -131,7 +145,8 @@ const DashboardHeader = () => {
             </div>
 
             <div className="flex items-center gap-2 lg:gap-3">
-              <div className="relative">
+              {/* Notifications Bell */}
+              <div className="relative" ref={notifRef}>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -148,15 +163,24 @@ const DashboardHeader = () => {
 
                 {showNotifications && (
                   <div className="absolute right-0 mt-2 w-80 bg-card border rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
-                    <div className="p-3 border-b font-semibold text-sm">
-                      Notifications ({unreadCount})
+                    <div className="p-3 border-b font-semibold text-sm flex items-center justify-between">
+                      <span>Notifications ({unreadCount})</span>
+                      <button
+                        className="text-xs text-primary hover:underline cursor-pointer"
+                        onClick={() => {
+                          setShowNotifications(false);
+                          navigate("/dashboard/notifications");
+                        }}
+                      >
+                        View All
+                      </button>
                     </div>
                     {notifications.length === 0 ? (
                       <div className="p-4 text-sm text-muted-foreground text-center">
                         No new notifications
                       </div>
                     ) : (
-                      notifications.map((n) => (
+                      notifications.slice(0, 5).map((n) => (
                         <div
                           key={n._id}
                           className="p-3 border-b hover:bg-muted/30 cursor-pointer transition-colors"
@@ -180,13 +204,52 @@ const DashboardHeader = () => {
                 )}
               </div>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                className="cursor-pointer border border-gray-300 hover:bg-primary hover:text-primary-foreground"
-              >
-                <User className="h-4 w-4" />
-              </Button>
+              {/* User Dropdown */}
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-accent transition-colors cursor-pointer"
+                >
+                  <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                    {user?.name?.charAt(0)?.toUpperCase() || "A"}
+                  </div>
+                  <span className="hidden md:block text-sm font-medium max-w-[120px] truncate">
+                    {user?.name || "Admin"}
+                  </span>
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                </button>
+
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-56 bg-card border rounded-xl shadow-lg z-50 overflow-hidden">
+                    <div className="p-3 border-b">
+                      <p className="text-sm font-semibold">{user?.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          navigate("/dashboard/settings");
+                        }}
+                      >
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </button>
+                      <button
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          handleLogout();
+                        }}
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>
