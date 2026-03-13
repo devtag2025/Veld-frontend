@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import {
-  ArrowUpRight,
+  // ArrowUpRight,
   FileText,
   DollarSign,
   Calendar,
   Bell,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/stores/booking.store";
 import { useNotificationStore } from "@/stores/notification.store";
 
@@ -65,10 +65,10 @@ const DashboardOverview = () => {
             Welcome back! Here's what's happening with your account.
           </p>
         </div>
-        <Button className="w-full md:w-fit text-xs md:text-sm cursor-pointer">
+        {/* <Button className="w-full md:w-fit text-xs md:text-sm cursor-pointer">
           <ArrowUpRight className="h-4 w-4" />
           Export Report
-        </Button>
+        </Button>  */}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
