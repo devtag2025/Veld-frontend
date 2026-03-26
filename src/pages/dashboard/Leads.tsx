@@ -137,6 +137,15 @@ const Leads = () => {
     fetchLeads();
   };
 
+  const handleCheckToggle = async (id: string, checked: boolean) => {
+    try {
+      await updateLead(id, { checked });
+      fetchLeads();
+    } catch {
+      toast.error("Failed to update");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <header className="bg-card py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -199,6 +208,7 @@ const Leads = () => {
         onView={handleView}
         onDelete={handleDelete}
         onStatusChange={handleStatusChange}
+        onCheckToggle={handleCheckToggle}
       />
 
       <LeadDetailsModal

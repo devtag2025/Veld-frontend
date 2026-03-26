@@ -35,7 +35,7 @@ const ResetPassword = () => {
       setIsSubmitting(true);
       await authApi.resetPassword(token, password);
       toast.success("Password reset successfully! You can now sign in.");
-      navigate("/auth/login");
+      navigate("/");
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Failed to reset password. The link may have expired.");
     } finally {
@@ -105,7 +105,7 @@ const ResetPassword = () => {
         <p className="text-center text-sm text-muted-foreground">
           Remember your password?{" "}
           <a
-            href="/auth/login"
+            href="/"
             className="font-medium text-primary hover:underline"
           >
             Sign in

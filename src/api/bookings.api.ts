@@ -9,6 +9,9 @@ import type {
   ContractStatusResponse,
   ConfirmDepositResponse,
   MarkPaidResponse,
+  FormType,
+  SendFormResponse,
+  MarkDeclarationSignedResponse,
 } from "@/types/booking";
 
 // ── CRUD ──────────────────────────────────────────────
@@ -78,6 +81,40 @@ export const downloadContract = async (id: string) => {
   return data as Blob;
 };
 
+// ── Forms (DocuSign Templates) ────────────────────────
+
+export const sendForm = async (id: string, formType: FormType) => {
+  const { data } = await http.post<SendFormResponse>(
+    `/bookings/${id}/forms/${formType}/send`,
+  );
+  return data;
+};
+
+export const markDeclarationSigned = async (id: string) => {
+  const { data } = await http.put<MarkDeclarationSignedResponse>(
+    `/bookings/${id}/forms/declaration/mark-signed`,
+  );
+  return data;
+};
+
+export const downloadForm = async (id: string, formType: "medical" | "declaration") => {
+  const response = await http.get(`/bookings/${id}/forms/${formType}/download`, {
+    responseType: "blob",
+  });
+
+  // Create a download link and trigger it
+  const blob = new Blob([response.data], { type: "application/pdf" });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+
+  const formLabel = formType === "medical" ? "Food-Medical-Form" : "Prohibited-Person-Declaration";
+  link.download = `${formLabel}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
 // ── Payments ──────────────────────────────────────────
 
 export const confirmDeposit = async (

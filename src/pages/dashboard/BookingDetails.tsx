@@ -17,12 +17,15 @@ import {
   Trash2,
   Send,
   Pencil,
+  ClipboardCheck,
+  HeartPulse,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/stores/booking.store";
 import type { Booking, BookingStatus } from "@/types/booking";
 import * as bookingsApi from "@/api/bookings.api";
 import toast from "react-hot-toast";
+import ResendContractModal from "@/components/layout/dashboard/booking/ResendContractModal";
 
 const statusColorMap: Record<BookingStatus, string> = {
   Draft: "text-slate-600 bg-slate-100 border-slate-200",
@@ -54,6 +57,9 @@ const BookingDetails = () => {
   const [editingNote, setEditingNote] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
 
+  // Resend contract modal state
+  const [resendModalOpen, setResendModalOpen] = useState(false);
+
   const fetchBooking = async () => {
     if (!id) return;
     try {
@@ -70,6 +76,34 @@ const BookingDetails = () => {
   useEffect(() => {
     fetchBooking();
   }, [id]);
+
+  // -- Auto-Refresh Polling --
+  // If the booking is waiting on a signature, poll every 10 seconds
+  // Pause polling when the resend modal is open to avoid resetting form values
+  useEffect(() => {
+    if (!booking || resendModalOpen) return;
+
+    const isAwaitingSignature =
+      booking.status === "Tentative" ||
+      booking.forms?.medical?.status === "Sent" ||
+      booking.forms?.declaration?.status === "Sent via DocuSign";
+
+    if (!isAwaitingSignature) return;
+
+    const interval = setInterval(async () => {
+      try {
+        // First sync statuses from DocuSign → DB
+        await bookingsApi.syncStatuses();
+        // Then fetch the updated booking
+        const data = await bookingsApi.getBooking(id!);
+        setBooking(data);
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [booking, id, resendModalOpen]);
 
   if (loading) {
     return (
@@ -92,7 +126,8 @@ const BookingDetails = () => {
 
   const currentStepIndex = statusSteps.indexOf(booking.status);
   const canEditPayments = ["Draft", "Tentative"].includes(booking.status);
-  const canSendContract = ["Draft", "Tentative", "Declined"].includes(booking.status);
+  const canSendContract = booking.status === "Draft";
+  const canResendContract = booking.status !== "Draft";
   //const canConfirmDeposit = booking.status === "Signed";
   const canDownload = ["Signed", "Confirmed"].includes(booking.status);
   const canMarkPayments = ["Signed", "Confirmed"].includes(booking.status);
@@ -277,6 +312,75 @@ const BookingDetails = () => {
     }
   };
 
+  // -- Form handlers --
+
+  const handleSendMedicalForm = async () => {
+    try {
+      toast.loading("Sending Food & Medical Form...");
+      await bookingsApi.sendForm(booking._id, "medical");
+      toast.dismiss();
+      toast.success("Food & Medical Form sent!");
+      fetchBooking();
+    } catch {
+      toast.dismiss();
+      toast.error("Failed to send medical form");
+    }
+  };
+
+  const handleSendDeclarationForm = async () => {
+    try {
+      toast.loading("Sending Prohibited Person Declaration...");
+      await bookingsApi.sendForm(booking._id, "declaration");
+      toast.dismiss();
+      toast.success("Prohibited Person Declaration sent!");
+      fetchBooking();
+    } catch {
+      toast.dismiss();
+      toast.error("Failed to send declaration form");
+    }
+  };
+
+  const handleMarkDeclarationSigned = async () => {
+    try {
+      toast.loading("Marking declaration as signed...");
+      await bookingsApi.markDeclarationSigned(booking._id);
+      toast.dismiss();
+      toast.success("Declaration marked as signed!");
+      fetchBooking();
+    } catch {
+      toast.dismiss();
+      toast.error("Failed to mark declaration");
+    }
+  };
+
+  const handleDownloadForm = async (formType: "medical" | "declaration") => {
+    try {
+      toast.loading("Downloading form...");
+      await bookingsApi.downloadForm(booking._id, formType);
+      toast.dismiss();
+      toast.success("Form downloaded!");
+    } catch {
+      toast.dismiss();
+      toast.error("Failed to download form");
+    }
+  };
+
+  // Form status helpers
+  const medicalStatus = booking.forms?.medical?.status || "Not Sent";
+  const declarationStatus = booking.forms?.declaration?.status || "Not Assigned";
+
+  const getFormStatusBadge = (status: string) => {
+    const map: Record<string, string> = {
+      "Not Sent": "text-slate-600 bg-slate-100 border-slate-200",
+      "Sent": "text-blue-700 bg-blue-50 border-blue-200",
+      "Signed": "text-emerald-700 bg-emerald-50 border-emerald-200",
+      "Not Assigned": "text-slate-600 bg-slate-100 border-slate-200",
+      "Sent via DocuSign": "text-blue-700 bg-blue-50 border-blue-200",
+      "Signed Manually": "text-purple-700 bg-purple-50 border-purple-200",
+    };
+    return map[status] || "text-slate-600 bg-slate-100 border-slate-200";
+  };
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
@@ -315,7 +419,16 @@ const BookingDetails = () => {
               className="flex-1 md:flex-none cursor-pointer"
             >
               <Send className="h-4 w-4 mr-2" />
-              {booking.status === "Draft" ? "Send Contract" : "Resend Contract"}
+              Send Contract
+            </Button>
+          )}
+          {canResendContract && (
+            <Button
+              onClick={() => setResendModalOpen(true)}
+              className="flex-1 md:flex-none cursor-pointer"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Resend Contract
             </Button>
           )}
           {/* Confirm Deposit button commented out
@@ -747,6 +860,126 @@ const BookingDetails = () => {
             )}
           </div>
 
+          {/* Forms & Documents */}
+          <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
+            <div className="p-6 border-b">
+              <h3 className="text-[11px] font-bold uppercase text-muted-foreground tracking-[0.2em]">
+                Forms & Documents
+              </h3>
+            </div>
+
+            {/* Food & Medical Form */}
+            <div className="p-5 border-b">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                    <HeartPulse size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">Food & Medical Form</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Dietary restrictions, allergies & medical info
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${getFormStatusBadge(medicalStatus)}`}
+                  >
+                    {medicalStatus}
+                  </span>
+                  {medicalStatus === "Not Sent" && (
+                    <Button
+                      size="sm"
+                      onClick={handleSendMedicalForm}
+                      className="text-xs cursor-pointer"
+                    >
+                      <Send className="h-3 w-3 mr-1" />
+                      Send Form
+                    </Button>
+                  )}
+                  {medicalStatus === "Sent" && (
+                    <span className="text-[10px] text-blue-600 font-medium italic">
+                      Awaiting signature...
+                    </span>
+                  )}
+                  {medicalStatus === "Signed" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownloadForm("medical")}
+                      className="text-xs cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200"
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Download Form
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Prohibited Person Declaration */}
+            <div className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                    <ClipboardCheck size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">Prohibited Person Declaration</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      PF495 — legal declaration required before hunt
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${getFormStatusBadge(declarationStatus)}`}
+                  >
+                    {declarationStatus}
+                  </span>
+                  {declarationStatus === "Not Assigned" && (
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={handleSendDeclarationForm}
+                        className="text-xs cursor-pointer"
+                      >
+                        <Send className="h-3 w-3 mr-1" />
+                        Send via DocuSign
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleMarkDeclarationSigned}
+                        className="text-xs cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200"
+                      >
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Mark Signed
+                      </Button>
+                    </>
+                  )}
+                  {declarationStatus === "Sent via DocuSign" && (
+                    <span className="text-[10px] text-blue-600 font-medium italic">
+                      Awaiting signature...
+                    </span>
+                  )}
+                  {(declarationStatus === "Signed" || declarationStatus === "Signed Manually") && booking.forms?.declaration?.envelopeId && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDownloadForm("declaration")}
+                      className="text-xs cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200"
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Download Form
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Notifications / Activity */}
           {booking.notifications && booking.notifications.length > 0 && (
             <div className="bg-card border rounded-xl p-6 shadow-sm">
@@ -776,6 +1009,14 @@ const BookingDetails = () => {
           )}
         </div>
       </div>
+
+      {/* Resend Contract Modal */}
+      <ResendContractModal
+        isOpen={resendModalOpen}
+        onClose={() => setResendModalOpen(false)}
+        booking={booking}
+        onContractResent={fetchBooking}
+      />
     </div>
   );
 };
