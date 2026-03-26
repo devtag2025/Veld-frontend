@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/stores/booking.store";
 import type { Booking, BookingStatus } from "@/types/booking";
 import BookingModal from "@/components/layout/dashboard/booking/BookingModal";
+import * as bookingsApi from "@/api/bookings.api";
 import toast from "react-hot-toast";
 
 const statusColorMap: Record<BookingStatus, string> = {
@@ -172,6 +173,15 @@ const Bookings = () => {
     return `${paid}/${total} paid`;
   };
 
+  const handleCheckToggle = async (id: string, currentValue: boolean) => {
+    try {
+      await bookingsApi.updateBooking(id, { checked: !currentValue } as any);
+      fetchBookings();
+    } catch {
+      toast.error("Failed to update");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -250,6 +260,7 @@ const Bookings = () => {
             <table className="w-full text-left border-collapse min-w-[950px]">
               <thead className="bg-muted/40 border-b">
                 <tr className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                  <th className="p-4 w-10"></th>
                   <th className="p-4">Client & Schedule</th>
                   <th className="p-4">Package</th>
                   <th className="p-4">Status</th>
@@ -264,6 +275,15 @@ const Bookings = () => {
                     key={b._id}
                     className="hover:bg-muted/20 transition-all group"
                   >
+                    <td className="p-4 w-10">
+                      <input
+                        type="checkbox"
+                        checked={b.checked || false}
+                        onChange={() => handleCheckToggle(b._id, b.checked)}
+                        className="h-4 w-4 rounded border-gray-300 cursor-pointer accent-primary"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
                     <td className="p-4">
                       <div className="font-bold text-slate-900">{b.name}</div>
                       <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-1 font-medium">
@@ -366,7 +386,7 @@ const Bookings = () => {
                 {filteredBookings.length === 0 && !isLoading && (
                   <tr>
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="p-6 text-center text-muted-foreground"
                     >
                       No bookings found

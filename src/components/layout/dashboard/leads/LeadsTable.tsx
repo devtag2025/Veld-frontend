@@ -11,6 +11,7 @@ interface LeadsTableProps {
   onView: (lead: Lead) => void;
   onDelete: (id: string) => void;
   onStatusChange: (id: string, status: Lead["status"]) => void;
+  onCheckToggle: (id: string, checked: boolean) => void;
 }
 
 type Status = "New" | "Contacted" | "Qualified" | "Converted";
@@ -34,14 +35,25 @@ const LeadRow = ({
   onDelete,
   onView,
   onStatusChange,
+  onCheckToggle,
 }: {
   lead: Lead;
   onEdit: (lead: Lead) => void;
   onDelete: (id: string) => void;
   onView: (lead: Lead) => void;
   onStatusChange: (id: string, status: Lead["status"]) => void;
+  onCheckToggle: (id: string, checked: boolean) => void;
 }) => (
   <tr key={lead._id} className="hover:bg-muted/30 transition-colors">
+    <td className="p-4 w-10">
+      <input
+        type="checkbox"
+        checked={lead.checked || false}
+        onChange={() => onCheckToggle(lead._id, !lead.checked)}
+        className="h-4 w-4 rounded border-gray-300 cursor-pointer accent-primary"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </td>
     <td className="p-4">{lead.name}</td>
     <td className="p-4">{lead.email}</td>
     <td className="p-4">{lead.phone}</td>
@@ -102,6 +114,7 @@ const LeadsTable = ({
   onView,
   onDelete,
   onStatusChange,
+  onCheckToggle,
 }: LeadsTableProps) => {
   const itemsPerPage = 6;
   const totalPages = Math.ceil(data.length / itemsPerPage);
@@ -132,6 +145,7 @@ const LeadsTable = ({
         <table className="min-w-[1000px] w-full text-left border-collapse">
           <thead>
             <tr className="border-b bg-muted/50">
+              <th className="p-4 w-10"></th>
               {[
                 "Name",
                 "Email",
@@ -161,6 +175,7 @@ const LeadsTable = ({
                 onDelete={onDelete}
                 onView={onView}
                 onStatusChange={onStatusChange}
+                onCheckToggle={onCheckToggle}
               />
             ))}
           </tbody>

@@ -25,7 +25,7 @@ const DashboardLayout = () => {
   }, [isAuthenticated]);
 
   if (!isAuthenticated) {
-    return <Navigate to="/auth/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return (

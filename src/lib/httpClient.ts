@@ -34,7 +34,7 @@ http.interceptors.request.use(
 
 const AUTH_ROUTES = [
   "/auth/login",
-  "/auth/signup",
+  // "/auth/signup",
   "/auth/refresh-token",
   "/auth/reset-password",
   "/auth/change-password",
@@ -107,7 +107,7 @@ http.interceptors.response.use(
         processQueue(refreshError, null);
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        window.location.href = "/auth/login";
+        window.location.href = "/";
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

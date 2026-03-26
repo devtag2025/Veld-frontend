@@ -149,7 +149,7 @@ const SignUp = () => {
         <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
           <a
-            href="/auth/login"
+            href="/"
             className="font-medium text-primary hover:underline"
           >
             Sign in

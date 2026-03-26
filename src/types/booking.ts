@@ -29,6 +29,25 @@ export interface BookingNotification {
   createdAt: string;
 }
 
+export type MedicalFormStatus = "Not Sent" | "Sent" | "Signed";
+export type DeclarationFormStatus = "Not Assigned" | "Sent via DocuSign" | "Signed Manually" | "Signed";
+
+export interface BookingForms {
+  medical: {
+    envelopeId?: string;
+    status: MedicalFormStatus;
+    sentAt?: string;
+    signedAt?: string;
+    formData?: Record<string, string>;
+  };
+  declaration: {
+    envelopeId?: string;
+    status: DeclarationFormStatus;
+    sentAt?: string;
+    signedAt?: string;
+  };
+}
+
 export interface Booking {
   _id: string;
   leadId?: string;
@@ -51,6 +70,8 @@ export interface Booking {
   envelopeId?: string;
   confirmedAt?: string;
   notifications?: BookingNotification[];
+  forms?: BookingForms;
+  checked: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -79,6 +100,21 @@ export type UpdateBookingPayload = Partial<CreateBookingPayload> & {
 
 export interface SendContractPayload {
   templateId?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  country?: string;
+  huntInterest?: string;
+  huntDate?: string;
+  firearmOptions?: "Company Rifles" | "Bringing Own";
+  totalAmount?: number;
+  note?: string;
+  paymentSchedule?: Array<{
+    label: string;
+    amount: number;
+    dueDate: string;
+  }>;
 }
 
 export interface SendContractResponse {
@@ -132,5 +168,22 @@ export interface MarkPaidResponse {
   data: {
     paymentSchedule: PaymentScheduleItem[];
     allPaymentsComplete: boolean;
+  };
+}
+
+export type FormType = "medical" | "declaration";
+
+export interface SendFormResponse {
+  data: {
+    envelopeId: string;
+    formType: FormType;
+    status: string;
+    sentTo: string;
+  };
+}
+
+export interface MarkDeclarationSignedResponse {
+  data: {
+    status: string;
   };
 }
