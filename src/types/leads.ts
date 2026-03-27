@@ -1,3 +1,5 @@
+import type { PaginationMetadata } from "./booking";
+
 export interface FollowUp {
   action: string;
   date: string;
@@ -25,4 +27,9 @@ export interface Lead {
   checked: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PaginatedLeadsResponse {
+  data: Lead[];
+  pagination: PaginationMetadata;
 }

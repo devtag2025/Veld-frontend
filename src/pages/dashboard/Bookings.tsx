@@ -41,6 +41,10 @@ const Bookings = () => {
     confirmDeposit,
     deleteBooking,
     downloadContract,
+    totalCount,
+    totalPages,
+    stats: backendStats,
+    fetchStats,
   } = useBookingStore();
 
   const navigate = useNavigate();
@@ -50,9 +54,11 @@ const Bookings = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
 
+  const [page, setPage] = useState(1);
+  const [hasSynced, setHasSynced] = useState(false);
+
   useEffect(() => {
-    const loadBookings = async () => {
-      // Sync DocuSign statuses first, then fetch fresh bookings
+    const sync = async () => {
       const updated = await syncStatuses();
       if (updated.length > 0) {
         toast.success(
@@ -60,59 +66,59 @@ const Bookings = () => {
           { duration: 5000 },
         );
       }
-      await fetchBookings();
+      setHasSynced(true);
     };
-    loadBookings();
+    sync();
   }, []);
 
-  const filteredBookings = useMemo(() => {
-    return bookings.filter((b) => {
-      const searchMatch = b.name
-        .toLowerCase()
-        .includes(search.toLowerCase());
-      const statusMatch =
-        statusFilter === "all" ? true : b.status === statusFilter;
-      return searchMatch && statusMatch;
+  useEffect(() => {
+    if (!hasSynced) return;
+    fetchStats();
+    fetchBookings({ 
+      status: statusFilter === "all" ? undefined : statusFilter, 
+      name: search,
+      page,
+      limit: 10
     });
-  }, [bookings, search, statusFilter]);
+  }, [search, statusFilter, page, hasSynced]);
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
 
   const stats = useMemo(() => {
-    const total = bookings.length;
-    const draft = bookings.filter((b) => b.status === "Draft").length;
-    const tentative = bookings.filter((b) => b.status === "Tentative").length;
-    const confirmed = bookings.filter((b) => b.status === "Confirmed").length;
-
     return [
       {
         label: "Total Bookings",
-        value: total,
+        value: backendStats.total || 0,
         icon: Calendar,
         color: "text-blue-600",
         bg: "bg-blue-50",
       },
       {
         label: "Draft",
-        value: draft,
+        value: backendStats.Draft || 0,
         icon: FileSignature,
         color: "text-slate-600",
         bg: "bg-slate-50",
       },
       {
         label: "Pending Signature",
-        value: tentative,
+        value: backendStats.Tentative || 0,
         icon: DollarSign,
         color: "text-amber-600",
         bg: "bg-amber-50",
       },
       {
         label: "Confirmed",
-        value: confirmed,
+        value: backendStats.Confirmed || 0,
         icon: CheckCircle2,
         color: "text-emerald-600",
         bg: "bg-emerald-50",
       },
     ];
-  }, [bookings]);
+  }, [backendStats]);
 
   const handleSendContract = async (id: string) => {
     try {
@@ -250,9 +256,10 @@ const Bookings = () => {
         </div>
       </div>
 
-      <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
-        {isLoading && bookings.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">
+      <div className="bg-card border rounded-xl shadow-sm overflow-hidden min-h-[400px]">
+        {(!hasSynced || isLoading) && bookings.length === 0 ? (
+          <div className="p-16 text-center text-muted-foreground flex flex-col justify-center items-center h-[400px]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             Loading bookings...
           </div>
         ) : (
@@ -270,7 +277,7 @@ const Bookings = () => {
                 </tr>
               </thead>
               <tbody className="divide-y text-sm">
-                {filteredBookings.map((b) => (
+                {bookings.map((b) => (
                   <tr
                     key={b._id}
                     className="hover:bg-muted/20 transition-all group"
@@ -383,7 +390,7 @@ const Bookings = () => {
                   </tr>
                 ))}
 
-                {filteredBookings.length === 0 && !isLoading && (
+                {bookings.length === 0 && !isLoading && (
                   <tr>
                     <td
                       colSpan={7}
@@ -398,6 +405,65 @@ const Bookings = () => {
           </div>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-4 rounded-xl border">
+          <div className="text-sm text-muted-foreground whitespace-nowrap">
+            Showing{" "}
+            <span className="font-medium text-foreground">
+              {bookings.length > 0 ? (page - 1) * 10 + 1 : 0}-
+              {(page - 1) * 10 + bookings.length}
+            </span>{" "}
+            of <span className="font-medium text-foreground">{totalCount}</span>{" "}
+            bookings
+          </div>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+            >
+              <div className="hidden sm:inline">Previous</div>
+              <div className="sm:hidden">&lt;</div>
+            </Button>
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+              // Simple pagination mapping (could be optimized with sliding windows)
+              if (
+                p === 1 || 
+                p === totalPages || 
+                (p >= page - 1 && p <= page + 1)
+              ) {
+                return (
+                  <Button
+                    key={p}
+                    variant={page === p ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPage(p)}
+                    className="w-8 sm:w-9"
+                  >
+                    {p}
+                  </Button>
+                );
+              } else if (p === page - 2 || p === page + 2) {
+                return <span key={p} className="px-1 text-muted-foreground">...</span>;
+              }
+              return null;
+            })}
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === totalPages}
+              onClick={() => setPage(page + 1)}
+            >
+              <div className="hidden sm:inline">Next</div>
+              <div className="sm:hidden">&gt;</div>
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

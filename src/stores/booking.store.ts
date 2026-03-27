@@ -10,6 +10,8 @@ import type {
 interface BookingFilters {
   status?: string;
   name?: string;
+  page?: number;
+  limit?: number;
 }
 
 interface BookingState {
@@ -17,10 +19,14 @@ interface BookingState {
   selectedBooking: Booking | null;
   isLoading: boolean;
   error: string | null;
+  totalCount: number;
+  totalPages: number;
+  stats: Record<string, number>;
 
   // CRUD
   fetchBookings: (filters?: BookingFilters) => Promise<void>;
   fetchBooking: (id: string) => Promise<void>;
+  fetchStats: () => Promise<void>;
   createBooking: (data: CreateBookingPayload) => Promise<Booking>;
   updateBooking: (id: string, data: UpdateBookingPayload) => Promise<Booking>;
   deleteBooking: (id: string) => Promise<void>;
@@ -44,17 +50,34 @@ export const useBookingStore = create<BookingState>((set) => ({
   selectedBooking: null,
   isLoading: false,
   error: null,
+  totalCount: 0,
+  totalPages: 1,
+  stats: {},
 
   fetchBookings: async (filters) => {
     set({ isLoading: true, error: null });
     try {
-      const bookings = await bookingsApi.getBookings(filters);
-      set({ bookings, isLoading: false });
+      const response = await bookingsApi.getBookings(filters);
+      set({ 
+        bookings: response.data, 
+        totalCount: response.pagination.total,
+        totalPages: response.pagination.totalPages,
+        isLoading: false 
+      });
     } catch (err: any) {
       set({
         error: err.response?.data?.message || "Failed to fetch bookings",
         isLoading: false,
       });
+    }
+  },
+
+  fetchStats: async () => {
+    try {
+      const stats = await bookingsApi.getBookingStats();
+      set({ stats });
+    } catch (err: any) {
+      console.error("Failed to fetch booking stats:", err);
     }
   },
 
@@ -156,8 +179,13 @@ export const useBookingStore = create<BookingState>((set) => ({
 
       if (updatedItems.length > 0) {
         // Re-fetch bookings to get the latest data
-        const bookings = await bookingsApi.getBookings();
-        set({ bookings });
+        // For simplicity, we just fetch page 1 again
+        const response = await bookingsApi.getBookings({ page: 1, limit: 10 });
+        set({ 
+          bookings: response.data,
+          totalCount: response.pagination.total,
+          totalPages: response.pagination.totalPages,
+        });
       }
 
       return updatedItems;

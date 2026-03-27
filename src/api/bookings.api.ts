@@ -12,16 +12,24 @@ import type {
   FormType,
   SendFormResponse,
   MarkDeclarationSignedResponse,
+  PaginatedBookingsResponse,
 } from "@/types/booking";
 
 // ── CRUD ──────────────────────────────────────────────
 
+export const getBookingStats = async () => {
+  const { data } = await http.get("/bookings/stats");
+  return data as Record<string, number>;
+};
+
 export const getBookings = async (params?: {
   status?: string;
   name?: string;
+  page?: number;
+  limit?: number;
 }) => {
   const { data } = await http.get("/bookings", { params });
-  return data.data as Booking[];
+  return data as PaginatedBookingsResponse;
 };
 
 export const getBooking = async (id: string) => {

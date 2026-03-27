@@ -1,14 +1,23 @@
-import type { Lead } from "@/types/leads";
+import type { Lead, PaginatedLeadsResponse } from "@/types/leads";
 import http from "@/lib/httpClient";
 
 // Get all leads with optional filters
-export const getLeads = async (status?: string, name?: string) => {
-  const params: Record<string, string> = {};
+export const getLeads = async (
+  status?: string, 
+  name?: string, 
+  page?: number, 
+  limit?: number, 
+  excludeConverted?: boolean
+) => {
+  const params: Record<string, string | number | boolean> = {};
   if (status) params.status = status;
   if (name) params.name = name;
+  if (page) params.page = page;
+  if (limit) params.limit = limit;
+  if (excludeConverted !== undefined) params.excludeConverted = excludeConverted;
 
   const { data } = await http.get("/leads", { params });
-  return data.data as Lead[];
+  return data as PaginatedLeadsResponse;
 };
 
 // Get single lead
@@ -37,13 +46,6 @@ export const deleteLead = async (id: string) => {
 
 // Get stats counts
 export const getLeadStats = async () => {
-  const statuses = ["New", "Contacted", "Qualified", "Converted"];
-  const result: Record<string, number> = {};
-  await Promise.all(
-    statuses.map(async (s) => {
-      const leads = await getLeads(s);
-      result[s] = leads.length;
-    }),
-  );
-  return result;
+  const { data } = await http.get("/leads/stats");
+  return data as Record<string, number>;
 };
