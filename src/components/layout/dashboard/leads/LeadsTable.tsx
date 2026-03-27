@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+
 import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Lead } from "@/types/leads";
@@ -7,10 +7,12 @@ interface LeadsTableProps {
   data: Lead[];
   currentPage: number;
   setCurrentPage: (page: number) => void;
+  totalPages: number;
+  totalCount: number;
   onEdit: (lead: Lead) => void;
   onView: (lead: Lead) => void;
   onDelete: (id: string) => void;
-  onStatusChange: (id: string, status: Lead["status"]) => void;
+  onStatusChange: (lead: Lead, status: Lead["status"]) => void;
   onCheckToggle: (id: string, checked: boolean) => void;
 }
 
@@ -41,7 +43,7 @@ const LeadRow = ({
   onEdit: (lead: Lead) => void;
   onDelete: (id: string) => void;
   onView: (lead: Lead) => void;
-  onStatusChange: (id: string, status: Lead["status"]) => void;
+  onStatusChange: (lead: Lead, status: Lead["status"]) => void;
   onCheckToggle: (id: string, checked: boolean) => void;
 }) => (
   <tr key={lead._id} className="hover:bg-muted/30 transition-colors">
@@ -68,7 +70,7 @@ const LeadRow = ({
       <select
         value={lead.status}
         onChange={(e) =>
-          onStatusChange(lead._id, e.target.value as Lead["status"])
+          onStatusChange(lead, e.target.value as Lead["status"])
         }
         className={`px-2 py-1 rounded text-xs font-medium ${getStatusStyle(
           lead.status,
@@ -110,19 +112,14 @@ const LeadsTable = ({
   data,
   currentPage,
   setCurrentPage,
+  totalPages,
+  totalCount,
   onEdit,
   onView,
   onDelete,
   onStatusChange,
   onCheckToggle,
 }: LeadsTableProps) => {
-  const itemsPerPage = 6;
-  const totalPages = Math.ceil(data.length / itemsPerPage);
-
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return data.slice(start, start + itemsPerPage);
-  }, [data, currentPage]);
 
   const getPages = () => {
     const groupIndex = Math.floor((currentPage - 1) / PAGES_PER_GROUP);
@@ -167,7 +164,7 @@ const LeadsTable = ({
             </tr>
           </thead>
           <tbody className="divide-y text-sm">
-            {paginatedData.map((lead) => (
+            {data.map((lead) => (
               <LeadRow
                 key={lead._id}
                 lead={lead}
@@ -186,10 +183,10 @@ const LeadsTable = ({
         <div className="text-sm text-muted-foreground whitespace-nowrap">
           Showing{" "}
           <span className="font-medium text-foreground">
-            {(currentPage - 1) * itemsPerPage + 1}-
-            {Math.min(currentPage * itemsPerPage, data.length)}
+            {data.length > 0 ? (currentPage - 1) * 10 + 1 : 0}-
+            {(currentPage - 1) * 10 + data.length}
           </span>{" "}
-          of <span className="font-medium text-foreground">{data.length}</span>{" "}
+          of <span className="font-medium text-foreground">{totalCount}</span>{" "}
           leads
         </div>
         {totalPages > 1 && (

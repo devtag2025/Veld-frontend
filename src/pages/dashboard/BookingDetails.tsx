@@ -321,9 +321,9 @@ const BookingDetails = () => {
       toast.dismiss();
       toast.success("Food & Medical Form sent!");
       fetchBooking();
-    } catch {
+    } catch (err: any) {
       toast.dismiss();
-      toast.error("Failed to send medical form");
+      toast.error(err?.response?.data?.message || err.message || "Failed to send medical form");
     }
   };
 
@@ -334,9 +334,9 @@ const BookingDetails = () => {
       toast.dismiss();
       toast.success("Prohibited Person Declaration sent!");
       fetchBooking();
-    } catch {
+    } catch (err: any) {
       toast.dismiss();
-      toast.error("Failed to send declaration form");
+      toast.error(err?.response?.data?.message || err.message || "Failed to send declaration form");
     }
   };
 
@@ -635,7 +635,7 @@ const BookingDetails = () => {
                   style={{
                     width:
                       totalPayments > 0
-                        ? `${(paidAmount / (booking.totalAmount || 1)) * 100}%`
+                        ? `${(paidCount / totalPayments) * 100}%`
                         : "0%",
                   }}
                 />

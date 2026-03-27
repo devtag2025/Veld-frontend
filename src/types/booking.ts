@@ -6,8 +6,20 @@ export type BookingStatus =
   | "Declined"
   | "Cancelled";
 
+export interface PaginationMetadata {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export type PackageType = string;
 export type FirearmOption = "Company Rifles" | "Bringing Own";
+
+export interface PaginatedBookingsResponse {
+  data: Booking[];
+  pagination: PaginationMetadata;
+}
 
 export interface PaymentScheduleItem {
   label: string;
@@ -114,6 +126,8 @@ export interface SendContractPayload {
     label: string;
     amount: number;
     dueDate: string;
+    paid?: boolean;
+    paidAt?: string;
   }>;
 }
 

@@ -34,7 +34,12 @@ const Leads = () => {
   const [bookingLead, setBookingLead] = useState<Lead | null>(null);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
-  const { leads, stats, fetchLeads } = useLeads(statusFilter, search);
+  const { leads, stats, loading, totalCount, totalPages, fetchLeads } = useLeads(
+    statusFilter,
+    search,
+    currentPage,
+    10
+  );
 
   // Filter out leads that have already been converted to a booking
   const filteredLeads = leads.filter((l) => !l.bookingId);
@@ -97,10 +102,15 @@ const Leads = () => {
     setViewLead(lead);
   };
 
-  const handleStatusChange = async (id: string, status: Lead["status"]) => {
+  const handleStatusChange = async (lead: Lead, status: Lead["status"]) => {
+    if (status === "Converted") {
+      handleProceedToBooking(lead);
+      return;
+    }
+
     try {
       toast.loading("Updating lead...");
-      await updateLead(id, { status });
+      await updateLead(lead._id, { status });
       toast.dismiss();
       toast.success("Lead updated successfully!");
       fetchLeads();
@@ -200,16 +210,26 @@ const Leads = () => {
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
       />
-      <LeadsTable
-        data={filteredLeads}
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        onEdit={handleEdit}
-        onView={handleView}
-        onDelete={handleDelete}
-        onStatusChange={handleStatusChange}
-        onCheckToggle={handleCheckToggle}
-      />
+      
+      {loading && leads.length === 0 ? (
+        <div className="p-12 mt-4 text-center border rounded-xl bg-card text-muted-foreground">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          Loading leads...
+        </div>
+      ) : (
+        <LeadsTable
+          data={filteredLeads}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          onEdit={handleEdit}
+          onView={handleView}
+          onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
+          onCheckToggle={handleCheckToggle}
+        />
+      )}
 
       <LeadDetailsModal
         lead={viewLead}

@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useBookingStore } from "@/stores/booking.store";
 import type { Lead } from "@/types/leads";
 import toast from "react-hot-toast";
+import { generatePaymentSchedule, isHuntDateValid } from "@/utils/paymentSchedule";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -25,6 +27,46 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
   const [firearmOptions, setFirearmOptions] = useState<"Company Rifles" | "Bringing Own">("Company Rifles");
   const [totalAmount, setTotalAmount] = useState("");
   const [note, setNote] = useState("");
+  
+  const [paymentDraft, setPaymentDraft] = useState<any[]>([]);
+
+  const addPaymentRow = () => {
+    setPaymentDraft([
+      ...paymentDraft,
+      { label: "", amount: "", dueDate: "" },
+    ]);
+  };
+
+  const removePaymentRow = (index: number) => {
+    setPaymentDraft(paymentDraft.filter((_, i) => i !== index));
+  };
+
+  const updatePaymentRow = (index: number, field: string, value: string) => {
+    const updated = [...paymentDraft];
+    updated[index] = { ...updated[index], [field]: value };
+    setPaymentDraft(updated);
+  };
+
+  const paymentTotal = paymentDraft.reduce(
+    (sum, p) => sum + (Number(p.amount) || 0),
+    0
+  );
+
+  // Auto-generated schedule preview (only when admin enters total amount without manual rows)
+  const autoSchedule = useMemo(() => {
+    if (paymentDraft.length > 0 || !totalAmount || !huntDate) return null;
+    const amt = Number(totalAmount);
+    if (amt < 5000) return null;
+    if (!isHuntDateValid(huntDate)) return null;
+    return generatePaymentSchedule(amt, huntDate);
+  }, [totalAmount, huntDate, paymentDraft.length]);
+
+  // Min hunt date = 60 days from today
+  const minHuntDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 60);
+    return d.toISOString().split("T")[0];
+  }, []);
 
   const isFromLead = !!leadData;
 
@@ -51,6 +93,7 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
     setHuntDate("");
     setFirearmOptions("Company Rifles");
     setTotalAmount("");
+    setPaymentDraft([]);
     setNote("");
   };
 
@@ -62,9 +105,38 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name || !email || !phone || !huntDate || !totalAmount) {
-      toast.error("Please fill in all required fields");
+    if (!name || !email || !phone || !company || !country || !huntInterest || !huntDate) {
+       toast.error("Please fill in all required fields (except payment if using schedule)");
+       return;
+    }
+
+    if (!isHuntDateValid(huntDate)) {
+      toast.error("Hunt date must be at least 60 days from today");
       return;
+    }
+
+    if (paymentDraft.length === 0 && !totalAmount) {
+      toast.error("Please provide a total amount or create a payment schedule");
+      return;
+    }
+
+    const finalTotal = paymentDraft.length > 0 ? paymentTotal : Number(totalAmount);
+
+    if (finalTotal < 5000) {
+      toast.error("Total payment amount must be at least $5000");
+      return;
+    }
+
+    // Validate payment rows
+    for (const p of paymentDraft) {
+      if (!p.label || !p.amount || !p.dueDate) {
+        toast.error("All payment fields (description, amount, due date) are required");
+        return;
+      }
+      if (Number(p.amount) <= 0) {
+        toast.error("Payment amount must be greater than 0");
+        return;
+      }
     }
 
     try {
@@ -79,8 +151,15 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
         huntDate,
         packageType: "",
         firearmOptions,
-        totalAmount: Number(totalAmount),
+        totalAmount: finalTotal,
         note: note || undefined,
+        paymentSchedule: paymentDraft.length > 0
+          ? paymentDraft.map((p) => ({
+              label: p.label,
+              amount: Number(p.amount),
+              dueDate: p.dueDate,
+            }))
+          : undefined,
       });
       toast.success("Booking created successfully!");
       resetForm();
@@ -115,8 +194,7 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                readOnly={isFromLead}
-                className={`w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none ${isFromLead ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
+                className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none"
                 placeholder="e.g. John Hunter"
               />
             </div>
@@ -129,8 +207,7 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                readOnly={isFromLead}
-                className={`w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none ${isFromLead ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
+                className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none"
                 placeholder="john@example.com"
               />
             </div>
@@ -143,47 +220,46 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                readOnly={isFromLead}
-                className={`w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none ${isFromLead ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
+                className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none"
                 placeholder="+1234567890"
               />
             </div>
             <div>
               <label className="block text-[11px] font-bold mb-1 uppercase text-muted-foreground">
-                Company
+                Company *
               </label>
               <input
                 type="text"
+                required
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
-                readOnly={isFromLead}
-                className={`w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none ${isFromLead ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
+                className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none"
                 placeholder="Hunt Co"
               />
             </div>
             <div>
               <label className="block text-[11px] font-bold mb-1 uppercase text-muted-foreground">
-                Country
+                Country *
               </label>
               <input
                 type="text"
+                required
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                readOnly={isFromLead}
-                className={`w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none ${isFromLead ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
+                className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none"
                 placeholder="Australia"
               />
             </div>
             <div>
               <label className="block text-[11px] font-bold mb-1 uppercase text-muted-foreground">
-                Hunt Interest
+                Hunt Interest *
               </label>
               <input
                 type="text"
+                required
                 value={huntInterest}
                 onChange={(e) => setHuntInterest(e.target.value)}
-                readOnly={isFromLead}
-                className={`w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none ${isFromLead ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : ""}`}
+                className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none"
                 placeholder="e.g. Red Stag"
               />
             </div>
@@ -202,22 +278,26 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
               <input
                 type="date"
                 required
+                min={minHuntDate}
                 value={huntDate}
                 onChange={(e) => setHuntDate(e.target.value)}
                 className="w-full bg-background border rounded-lg text-sm py-2 px-3 outline-none"
               />
+              {huntDate && !isHuntDateValid(huntDate) && (
+                <p className="text-[10px] text-red-500 mt-1">Hunt date must be at least 60 days from today</p>
+              )}
             </div>
             <div>
               <label className="block text-[11px] font-bold mb-1 uppercase text-muted-foreground">
-                Total Amount ($) *
+                Total Amount ($) * <span className="text-[10px] font-normal lowercase">(minimum $5000)</span>
               </label>
               <input
                 type="number"
-                required
-                value={totalAmount}
+                disabled={paymentDraft.length > 0}
+                value={paymentDraft.length > 0 ? paymentTotal : totalAmount}
                 onChange={(e) => setTotalAmount(e.target.value)}
-                className="w-full bg-background border rounded-lg text-sm py-2 px-3 outline-none focus:ring-1 focus:ring-primary"
-                placeholder="25000"
+                className="w-full bg-background border rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary outline-none disabled:bg-muted/50 disabled:cursor-not-allowed"
+                placeholder={paymentDraft.length > 0 ? "Calculated from schedule" : "e.g. 15000"}
                 min={0}
               />
             </div>
@@ -239,6 +319,118 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
               </select>
             </div>
           </div>
+        </div>
+
+        {/* Payment Schedule Section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-primary uppercase tracking-widest">
+              Payment Schedule
+            </h3>
+            {paymentDraft.length > 0 && (
+              <span className="text-xs font-bold text-muted-foreground">
+                Total Scheduled: ${paymentTotal.toLocaleString()}
+              </span>
+            )}
+          </div>
+
+          {paymentDraft.map((p, idx) => (
+            <div
+              key={idx}
+              className="grid grid-cols-12 gap-3 items-end"
+            >
+              <div className="col-span-4">
+                {idx === 0 && (
+                  <label className="block text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                    Description
+                  </label>
+                )}
+                <input
+                  type="text"
+                  value={p.label}
+                  onChange={(e) =>
+                    updatePaymentRow(idx, "label", e.target.value)
+                  }
+                  className="w-full bg-background border rounded-lg text-sm py-2 px-3 outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="e.g. Initial Deposit"
+                />
+              </div>
+              <div className="col-span-3">
+                {idx === 0 && (
+                  <label className="block text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                    Amount ($)
+                  </label>
+                )}
+                <input
+                  type="number"
+                  value={p.amount}
+                  onChange={(e) =>
+                    updatePaymentRow(idx, "amount", e.target.value)
+                  }
+                  className="w-full bg-background border rounded-lg text-sm py-2 px-3 outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="5000"
+                  min={0}
+                />
+              </div>
+              <div className="col-span-4">
+                {idx === 0 && (
+                  <label className="block text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                    Due Date
+                  </label>
+                )}
+                <input
+                  type="date"
+                  value={p.dueDate}
+                  onChange={(e) =>
+                    updatePaymentRow(idx, "dueDate", e.target.value)
+                  }
+                  className="w-full bg-background border rounded-lg text-sm py-2 px-3 outline-none"
+                />
+              </div>
+              <div className="col-span-1 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => removePaymentRow(idx)}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={addPaymentRow}
+            className="w-full border-2 border-dashed border-muted rounded-xl py-3 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Plus size={16} /> Add Payment Installment
+          </button>
+
+          {/* Auto-generated schedule preview */}
+          {autoSchedule && paymentDraft.length === 0 && (
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2">
+              <p className="text-[11px] font-bold text-primary uppercase tracking-wider">
+                Auto-generated Payment Preview
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Since you haven't added manual payments, the following schedule will be auto-created:
+              </p>
+              <div className="space-y-1.5">
+                {autoSchedule.map((p, idx) => (
+                  <div key={idx} className="flex justify-between items-center bg-background border rounded-lg px-3 py-2">
+                    <div>
+                      <span className="text-sm font-medium">{p.label}</span>
+                      <span className="text-[10px] text-muted-foreground ml-2">
+                        Due: {new Date(p.dueDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <span className="text-sm font-bold">${p.amount.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-3">
