@@ -4,7 +4,6 @@ import type {
   Booking,
   CreateBookingPayload,
   UpdateBookingPayload,
-  SyncStatusItem,
 } from "@/types/booking";
 
 interface BookingFilters {
@@ -33,7 +32,6 @@ interface BookingState {
 
   // DocuSign
   sendContract: (id: string, templateId?: string) => Promise<void>;
-  syncStatuses: () => Promise<SyncStatusItem[]>;
   downloadContract: (id: string) => Promise<void>;
 
   // Payments
@@ -172,28 +170,7 @@ export const useBookingStore = create<BookingState>((set) => ({
     }
   },
 
-  syncStatuses: async () => {
-    try {
-      const response = await bookingsApi.syncStatuses();
-      const updatedItems = response.data.updated;
 
-      if (updatedItems.length > 0) {
-        // Re-fetch bookings to get the latest data
-        // For simplicity, we just fetch page 1 again
-        const response = await bookingsApi.getBookings({ page: 1, limit: 10 });
-        set({ 
-          bookings: response.data,
-          totalCount: response.pagination.total,
-          totalPages: response.pagination.totalPages,
-        });
-      }
-
-      return updatedItems;
-    } catch (err: any) {
-      console.warn("Failed to sync DocuSign statuses:", err);
-      return [];
-    }
-  },
 
   downloadContract: async (id) => {
     try {
@@ -247,7 +224,12 @@ export const useBookingStore = create<BookingState>((set) => ({
       set((state) => ({
         bookings: state.bookings.map((b) =>
           b._id === id
-            ? { ...b, paymentSchedule: response.data.paymentSchedule }
+            ? {
+                ...b,
+                status: response.data.status || b.status,
+                confirmedAt: response.data.confirmedAt || b.confirmedAt,
+                paymentSchedule: response.data.paymentSchedule,
+              }
             : b,
         ),
         isLoading: false,

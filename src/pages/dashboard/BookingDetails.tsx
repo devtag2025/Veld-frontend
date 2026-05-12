@@ -19,6 +19,7 @@ import {
   Pencil,
   ClipboardCheck,
   HeartPulse,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/stores/booking.store";
@@ -78,8 +79,9 @@ const BookingDetails = () => {
   }, [id]);
 
   // -- Auto-Refresh Polling --
-  // If the booking is waiting on a signature, poll every 10 seconds
-  // Pause polling when the resend modal is open to avoid resetting form values
+  // If the booking is waiting on a signature, poll our own DB every 15 seconds.
+  // The DocuSign webhook updates the DB in real-time; this just picks up those changes for the UI.
+  // Pause polling when the resend modal is open to avoid resetting form values.
   useEffect(() => {
     if (!booking || resendModalOpen) return;
 
@@ -92,15 +94,12 @@ const BookingDetails = () => {
 
     const interval = setInterval(async () => {
       try {
-        // First sync statuses from DocuSign → DB
-        await bookingsApi.syncStatuses();
-        // Then fetch the updated booking
         const data = await bookingsApi.getBooking(id!);
         setBooking(data);
       } catch (err) {
         console.error("Polling error:", err);
       }
-    }, 10000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [booking, id, resendModalOpen]);
@@ -542,6 +541,11 @@ const BookingDetails = () => {
                   : "N/A"
               }
             />
+            <InfoRow
+              icon={<Package size={16} />}
+              label="Safari Package"
+              value={booking.packageType || "N/A"}
+            />
           </div>
 
           {/* Notes */}
@@ -657,14 +661,17 @@ const BookingDetails = () => {
                 {paymentDraft.map((p, idx) => (
                   <div
                     key={idx}
-                    className="grid grid-cols-12 gap-3 items-end"
+                    className="flex flex-col sm:grid sm:grid-cols-12 gap-3 sm:items-end bg-muted/20 sm:bg-transparent p-3 sm:p-0 rounded-lg sm:rounded-none mb-3 sm:mb-0 border sm:border-none"
                   >
-                    <div className="col-span-4">
+                    <div className="sm:col-span-4">
                       {idx === 0 && (
-                        <label className="block text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                        <label className="hidden sm:block text-[10px] font-bold uppercase text-muted-foreground mb-1">
                           Description
                         </label>
                       )}
+                      <label className="block sm:hidden text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                        Description
+                      </label>
                       <input
                         type="text"
                         value={p.label}
@@ -675,12 +682,15 @@ const BookingDetails = () => {
                         placeholder="e.g. Initial Deposit"
                       />
                     </div>
-                    <div className="col-span-3">
+                    <div className="sm:col-span-3">
                       {idx === 0 && (
-                        <label className="block text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                        <label className="hidden sm:block text-[10px] font-bold uppercase text-muted-foreground mb-1">
                           Amount ($)
                         </label>
                       )}
+                      <label className="block sm:hidden text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                        Amount ($)
+                      </label>
                       <input
                         type="number"
                         value={p.amount}
@@ -692,12 +702,15 @@ const BookingDetails = () => {
                         min={0}
                       />
                     </div>
-                    <div className="col-span-4">
+                    <div className="sm:col-span-4">
                       {idx === 0 && (
-                        <label className="block text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                        <label className="hidden sm:block text-[10px] font-bold uppercase text-muted-foreground mb-1">
                           Due Date
                         </label>
                       )}
+                      <label className="block sm:hidden text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                        Due Date
+                      </label>
                       <input
                         type="date"
                         value={p.dueDate}
@@ -707,13 +720,13 @@ const BookingDetails = () => {
                         className="w-full bg-background border rounded-lg text-sm py-2 px-3 outline-none"
                       />
                     </div>
-                    <div className="col-span-1 flex justify-center">
+                    <div className="sm:col-span-1 flex justify-end sm:justify-center">
                       <button
                         type="button"
                         onClick={() => removePaymentRow(idx)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer w-full sm:w-auto bg-white border sm:border-none border-red-100 sm:bg-transparent flex items-center justify-center gap-2"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={16} /> <span className="sm:hidden text-sm">Remove</span>
                       </button>
                     </div>
                   </div>
