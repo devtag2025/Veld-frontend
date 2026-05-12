@@ -5,7 +5,6 @@ import type {
   UpdateBookingPayload,
   SendContractPayload,
   SendContractResponse,
-  SyncStatusResponse,
   ContractStatusResponse,
   ConfirmDepositResponse,
   MarkPaidResponse,
@@ -68,12 +67,7 @@ export const sendContract = async (
   return data;
 };
 
-export const syncStatuses = async () => {
-  const { data } = await http.get<SyncStatusResponse>(
-    "/bookings/sync-statuses",
-  );
-  return data;
-};
+
 
 export const getContractStatus = async (id: string) => {
   const { data } = await http.get<ContractStatusResponse>(

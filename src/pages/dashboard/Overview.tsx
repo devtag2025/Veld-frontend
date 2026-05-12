@@ -11,7 +11,7 @@ import { useBookingStore } from "@/stores/booking.store";
 import { useNotificationStore } from "@/stores/notification.store";
 
 const DashboardOverview = () => {
-  const { bookings, fetchBookings } = useBookingStore();
+  const { bookings, fetchBookings, isLoading } = useBookingStore();
   const { notifications, unreadCount } = useNotificationStore();
 
   useEffect(() => {
@@ -84,10 +84,16 @@ const DashboardOverview = () => {
               <stat.icon className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="mt-2 flex items-baseline gap-2">
-              <p className="text-2xl font-bold">{stat.value}</p>
-              <span className="text-sm font-medium text-green-600">
-                {stat.change}
-              </span>
+              {isLoading ? (
+                <div className="h-8 w-24 bg-muted animate-pulse rounded"></div>
+              ) : (
+                <>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <span className="text-sm font-medium text-green-600">
+                    {stat.change}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         ))}

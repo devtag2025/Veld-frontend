@@ -25,6 +25,7 @@ export interface Lead {
   activity: Activity[];
   bookingId?: string | null;
   checked: boolean;
+  checked2: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import type { Contract, ContractFormData } from '../../../../types/contract';
 import { useContractTemplateStore } from '@/stores/contractTemplate.store';
 import { usePackageStore } from '@/stores/package.store';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 interface CreateContractModalProps {
   isOpen: boolean;
@@ -295,20 +296,22 @@ const CreateContractModal: FC<CreateContractModalProps> = ({ isOpen, onClose, co
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Package Type <span className="text-red-500">*</span>
                         </label>
-                        <select
+                        <CustomSelect
                           value={packageType}
-                          onChange={e => setPackageType(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          {packages.length === 0 && (
-                            <option value="">No packages available</option>
-                          )}
-                          {packages.map(pkg => (
-                            <option key={pkg._id} value={pkg.name}>
-                              {pkg.name} - ${pkg.price}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={setPackageType}
+                          placeholder={packages.length === 0 ? "No packages available" : "Select a package..."}
+                          options={packages.map(pkg => ({
+                            value: pkg.name,
+                            label: (
+                              <span>
+                                {pkg.name} <br className="sm:hidden" />
+                                <span className="text-muted-foreground font-medium sm:ml-1">
+                                  — USD ${pkg.price.toLocaleString()}
+                                </span>
+                              </span>
+                            ),
+                          }))}
+                        />
                       </div>
 
                       <div>

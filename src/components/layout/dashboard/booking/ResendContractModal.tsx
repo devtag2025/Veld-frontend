@@ -1,11 +1,14 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Plus, Trash2, CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import toast from "react-hot-toast";
 import * as bookingsApi from "@/api/bookings.api";
 import type { Booking } from "@/types/booking";
-import { isHuntDateValid } from "@/utils/paymentSchedule";
+import { isHuntDateValid, generatePaymentSchedule, generateRemainingSchedule } from "@/utils/paymentSchedule";
+import { SAFARI_PACKAGES, findPackageByName } from "@/data/safariPackages";
+import { CustomSelect } from "@/components/ui/CustomSelect";
+import type { SafariPackage } from "@/data/safariPackages";
 
 interface ExistingPayment {
   label: string;
@@ -48,6 +51,10 @@ const ResendContractModal = ({
   const [note, setNote] = useState("");
   const [isSending, setIsSending] = useState(false);
 
+  // Package selection state
+  const [selectedPackageId, setSelectedPackageId] = useState("");
+  const [includeAddOn, setIncludeAddOn] = useState(false);
+
   // Existing payments from the booking (read-only for paid ones)
   const [existingPayments, setExistingPayments] = useState<ExistingPayment[]>([]);
   // New payments added by admin
@@ -60,9 +67,17 @@ const ResendContractModal = ({
     return d.toISOString().split("T")[0];
   }, []);
 
+  // Derive the selected package object
+  const selectedPackage: SafariPackage | undefined = useMemo(
+    () => SAFARI_PACKAGES.find((p) => p.id === selectedPackageId),
+    [selectedPackageId]
+  );
+
   // Pre-fill with existing booking data when modal opens
+  const hasInitialized = useRef(false);
   useEffect(() => {
-    if (isOpen && booking) {
+    if (isOpen && booking && !hasInitialized.current) {
+      hasInitialized.current = true;
       setName(booking.name || "");
       setEmail(booking.email || "");
       setPhone(booking.phone || "");
@@ -77,6 +92,21 @@ const ResendContractModal = ({
       setFirearmOptions(booking.firearmOptions || "Company Rifles");
       setTotalAmount(booking.totalAmount?.toString() || "");
       setNote(booking.note || "");
+
+      // Pre-select the package if it matches a known package
+      const matchedPkg = findPackageByName(booking.packageType);
+      if (matchedPkg) {
+        setSelectedPackageId(matchedPkg.id);
+        // Check if booking already has add-ons matching this package's add-on
+        if (matchedPkg.addOn && Array.isArray(booking.addOns) && booking.addOns.length > 0) {
+          setIncludeAddOn(true);
+        } else {
+          setIncludeAddOn(false);
+        }
+      } else {
+        setSelectedPackageId("");
+        setIncludeAddOn(false);
+      }
 
       // Load existing payment schedule sorted by due date, preserving paid status
       if (booking.paymentSchedule && booking.paymentSchedule.length > 0) {
@@ -96,8 +126,89 @@ const ResendContractModal = ({
         setExistingPayments([]);
       }
       setNewPayments([]);
+    } else if (!isOpen) {
+      hasInitialized.current = false;
     }
   }, [isOpen, booking]);
+
+  // When package or add-on changes (after initial load), update totalAmount
+  const [initialLoad, setInitialLoad] = useState(true);
+  useEffect(() => {
+    if (initialLoad) {
+      setInitialLoad(false);
+      return;
+    }
+    if (!selectedPackage) return;
+    let price = selectedPackage.price;
+    if (includeAddOn && selectedPackage.addOn) {
+      price += selectedPackage.addOn.price;
+    }
+    setTotalAmount(price.toString());
+  }, [selectedPackage, includeAddOn]);
+
+  // Reset initialLoad flag when modal opens
+  useEffect(() => {
+    if (isOpen) setInitialLoad(true);
+  }, [isOpen]);
+
+  // Recalculate payment schedule based on total amount, hunt date, and existing paid amounts
+  const recalculatePayments = (newTotalStr: string, currentHuntDate: string) => {
+    if (!newTotalStr || !currentHuntDate || !isHuntDateValid(currentHuntDate)) return;
+
+    const newTotal = Number(newTotalStr);
+    if (isNaN(newTotal) || newTotal <= 0) return;
+
+    // Check what is already paid
+    const paidPayments = existingPayments.filter((p) => p.paid);
+    const sumPaid = paidPayments.reduce((sum, p) => sum + p.amount, 0);
+
+    // Condition 1: If nothing is paid
+    if (paidPayments.length === 0) {
+      const newSchedule = generatePaymentSchedule(newTotal, currentHuntDate).map((p) => ({
+        ...p,
+        paid: false,
+      }));
+      setExistingPayments(newSchedule);
+      setNewPayments([]);
+      return;
+    }
+
+    // Condition 2 & 3: If some or all payments are paid
+    const remainingAmount = newTotal - sumPaid;
+    
+    // We check if all existing payments in the database were paid. 
+    // We only consider existingPayments from the DB, not manual ones we haven't saved yet.
+    // If all existing payments are paid and we haven't added any new unpaid ones yet...
+    const allPaid = existingPayments.length > 0 && existingPayments.every((p) => p.paid) && newPayments.length === 0;
+
+    // Keep only the paid rows in existingPayments
+    setExistingPayments(paidPayments);
+
+    if (allPaid) {
+      // Condition 3: All existing payments are marked paid. Add one payment for the remainder.
+      const generated = generateRemainingSchedule(remainingAmount, currentHuntDate, true).map((p) => ({
+        label: p.label,
+        amount: p.amount.toString(),
+        dueDate: p.dueDate,
+      }));
+      setNewPayments(generated);
+    } else {
+      // Condition 2: Some are paid, some are not. Spread remainder across unpaid.
+      const generated = generateRemainingSchedule(remainingAmount, currentHuntDate, false).map((p) => ({
+        label: p.label,
+        amount: p.amount.toString(),
+        dueDate: p.dueDate,
+      }));
+      setNewPayments(generated);
+    }
+  };
+
+  // Auto-recalculate when totalAmount or huntDate changes (skip initial load)
+  useEffect(() => {
+    if (initialLoad || !isOpen) return;
+    recalculatePayments(totalAmount, huntDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalAmount, huntDate]);
 
   // New payment helpers
   const addPaymentRow = () => {
@@ -182,6 +293,12 @@ const ResendContractModal = ({
       return;
     }
 
+    // Build add-ons array
+    const addOns: string[] = [];
+    if (selectedPackage?.addOn && includeAddOn) {
+      addOns.push(`${selectedPackage.addOn.label} (+$${selectedPackage.addOn.price.toLocaleString()})`);
+    }
+
     // Combine existing payments (with their paid status preserved) and new ones
     const combinedSchedule = [
       ...existingPayments.map((p) => ({
@@ -210,6 +327,8 @@ const ResendContractModal = ({
         country: country || undefined,
         huntInterest: huntInterest || undefined,
         huntDate,
+        packageType: selectedPackage?.name || booking.packageType || undefined,
+        addOns: addOns.length > 0 ? addOns : [],
         firearmOptions,
         totalAmount: hasAnyPayments ? paymentTotal : Number(totalAmount),
         note: note || undefined,
@@ -328,6 +447,52 @@ const ResendContractModal = ({
             Hunt Details
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Safari Package Dropdown */}
+            <div className="md:col-span-2">
+              <label className="block text-[11px] font-bold mb-1 uppercase text-muted-foreground">
+                Safari Package
+              </label>
+              <CustomSelect
+                value={selectedPackageId}
+                onChange={(val) => {
+                  setSelectedPackageId(val);
+                  setIncludeAddOn(false);
+                }}
+                placeholder="Select a safari package..."
+                options={SAFARI_PACKAGES.map((pkg) => ({
+                  value: pkg.id,
+                  label: (
+                    <span>
+                      {pkg.name} <br className="sm:hidden" />
+                      <span className="text-muted-foreground font-medium sm:ml-1">
+                        — USD ${pkg.price.toLocaleString()}
+                      </span>
+                    </span>
+                  ),
+                }))}
+              />
+            </div>
+
+            {/* Add-on checkbox for eligible packages */}
+            {selectedPackage?.addOn && (
+              <div className="md:col-span-2">
+                <label className="flex items-center gap-2 bg-background border rounded-lg px-3 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={includeAddOn}
+                    onChange={(e) => setIncludeAddOn(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
+                  />
+                  <span className="text-sm font-medium">
+                    {selectedPackage.addOn.label}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    + ${selectedPackage.addOn.price.toLocaleString()}
+                  </span>
+                </label>
+              </div>
+            )}
+
             <div>
               <label className="block text-[11px] font-bold mb-1 uppercase text-muted-foreground">
                 Hunt Date *
@@ -385,32 +550,35 @@ const ResendContractModal = ({
               </div>
 
               {/* Column headers */}
-              <div className="grid grid-cols-12 gap-3 px-2">
-                <div className="col-span-3">
+              <div className="hidden sm:grid sm:grid-cols-12 gap-3 px-2">
+                <div className="sm:col-span-3">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">Description</span>
                 </div>
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">Amount ($)</span>
                 </div>
-                <div className="col-span-3">
+                <div className="sm:col-span-3">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">Due Date</span>
                 </div>
-                <div className="col-span-2 text-center">
+                <div className="sm:col-span-2 text-center">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">Status</span>
                 </div>
-                <div className="col-span-2" />
+                <div className="sm:col-span-2" />
               </div>
 
               {existingPayments.map((p, idx) => (
                 <div
                   key={`existing-${idx}`}
-                  className={`grid grid-cols-12 gap-3 items-center rounded-lg px-2 py-2.5 ${
+                  className={`flex flex-col sm:grid sm:grid-cols-12 gap-3 sm:items-center rounded-lg p-3 sm:px-2 sm:py-2.5 mb-3 sm:mb-0 border sm:border ${
                     p.paid
-                      ? "bg-emerald-50/60 border border-emerald-200"
-                      : "bg-amber-50/40 border border-amber-200"
+                      ? "bg-emerald-50/60 border-emerald-200"
+                      : "bg-amber-50/40 border-amber-200"
                   }`}
                 >
-                  <div className="col-span-3">
+                  <div className="sm:col-span-3">
+                    <label className="block sm:hidden text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                      Description
+                    </label>
                     <input
                       type="text"
                       value={p.label}
@@ -425,7 +593,10 @@ const ResendContractModal = ({
                       }`}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="sm:col-span-2">
+                    <label className="block sm:hidden text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                      Amount ($)
+                    </label>
                     <input
                       type="number"
                       value={p.amount}
@@ -441,7 +612,10 @@ const ResendContractModal = ({
                       min={0}
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="sm:col-span-3">
+                    <label className="block sm:hidden text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                      Due Date
+                    </label>
                     <input
                       type="date"
                       value={p.dueDate}
@@ -456,7 +630,10 @@ const ResendContractModal = ({
                       }`}
                     />
                   </div>
-                  <div className="col-span-2 flex items-center justify-center">
+                  <div className="sm:col-span-2 flex items-center justify-start sm:justify-center">
+                    <label className="block sm:hidden text-[10px] font-bold uppercase text-muted-foreground mr-2">
+                      Status:
+                    </label>
                     {p.paid ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-emerald-700 whitespace-nowrap">
                         <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
@@ -469,16 +646,16 @@ const ResendContractModal = ({
                       </span>
                     )}
                   </div>
-                  <div className="col-span-2 flex justify-end">
+                  <div className="sm:col-span-2 flex justify-end sm:justify-end">
                     {p.paid ? (
-                      <div className="p-2 text-transparent select-none">—</div>
+                      <div className="p-2 text-transparent select-none hidden sm:block">—</div>
                     ) : (
                       <button
                         type="button"
                         onClick={() => removeExistingPayment(idx)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer w-full sm:w-auto bg-white border sm:border-none border-red-100 sm:bg-transparent flex items-center justify-center gap-2 mt-2 sm:mt-0"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={16} /> <span className="sm:hidden text-sm">Remove</span>
                       </button>
                     )}
                   </div>
@@ -495,25 +672,28 @@ const ResendContractModal = ({
               </div>
 
               {/* Column headers */}
-              <div className="grid grid-cols-12 gap-3 px-2">
-                <div className="col-span-4">
+              <div className="hidden sm:grid sm:grid-cols-12 gap-3 px-2">
+                <div className="sm:col-span-4">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">Description</span>
                 </div>
-                <div className="col-span-3">
+                <div className="sm:col-span-3">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">Amount ($)</span>
                 </div>
-                <div className="col-span-4">
+                <div className="sm:col-span-4">
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">Due Date</span>
                 </div>
-                <div className="col-span-1" />
+                <div className="sm:col-span-1" />
               </div>
 
               {newPayments.map((p, idx) => (
                 <div
                   key={`new-${idx}`}
-                  className="grid grid-cols-12 gap-3 items-center"
+                  className="flex flex-col sm:grid sm:grid-cols-12 gap-3 sm:items-center bg-muted/20 sm:bg-transparent p-3 sm:p-0 rounded-lg sm:rounded-none mb-3 sm:mb-0 border sm:border-none"
                 >
-                  <div className="col-span-4">
+                  <div className="sm:col-span-4">
+                    <label className="block sm:hidden text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                      Description
+                    </label>
                     <input
                       type="text"
                       value={p.label}
@@ -524,7 +704,10 @@ const ResendContractModal = ({
                       placeholder="e.g. Additional Charge"
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="sm:col-span-3">
+                    <label className="block sm:hidden text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                      Amount ($)
+                    </label>
                     <input
                       type="number"
                       value={p.amount}
@@ -536,7 +719,10 @@ const ResendContractModal = ({
                       min={0}
                     />
                   </div>
-                  <div className="col-span-4">
+                  <div className="sm:col-span-4">
+                    <label className="block sm:hidden text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                      Due Date
+                    </label>
                     <input
                       type="date"
                       value={p.dueDate}
@@ -546,13 +732,13 @@ const ResendContractModal = ({
                       className="w-full bg-background border rounded-lg text-sm py-2 px-3 outline-none"
                     />
                   </div>
-                  <div className="col-span-1 flex justify-center">
+                  <div className="sm:col-span-1 flex justify-end sm:justify-center">
                     <button
                       type="button"
                       onClick={() => removeNewPaymentRow(idx)}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer w-full sm:w-auto bg-white border sm:border-none border-red-100 sm:bg-transparent flex items-center justify-center gap-2"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={16} /> <span className="sm:hidden text-sm">Remove</span>
                     </button>
                   </div>
                 </div>
