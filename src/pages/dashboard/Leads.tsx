@@ -147,9 +147,9 @@ const Leads = () => {
     fetchLeads();
   };
 
-  const handleCheckToggle = async (id: string, checked: boolean) => {
+  const handleCheckToggle = async (id: string, field: "checked" | "checked2", value: boolean) => {
     try {
-      await updateLead(id, { checked });
+      await updateLead(id, { [field]: value });
       fetchLeads();
     } catch {
       toast.error("Failed to update");
@@ -195,7 +195,11 @@ const Leads = () => {
               </span>
             </div>
 
-            <div className="text-3xl font-bold">{stat.value}</div>
+            {loading ? (
+              <div className="h-9 w-16 bg-muted animate-pulse rounded mt-1"></div>
+            ) : (
+              <div className="text-3xl font-bold">{stat.value}</div>
+            )}
 
             <p className="text-xs text-muted-foreground mt-1">
               {stat.subtitle}

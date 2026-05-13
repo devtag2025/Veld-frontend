@@ -1,7 +1,7 @@
 /**
  * Formats a Date to YYYY-MM-DD string in LOCAL timezone (avoids UTC shift).
  */
-function toLocalDateStr(d: Date): string {
+export function toLocalDateStr(d: Date): string {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
@@ -85,4 +85,70 @@ export function isHuntDateValid(huntDateStr: string): boolean {
   const diffMs = huntDate.getTime() - today.getTime();
   const diffDays = diffMs / (1000 * 60 * 60 * 24);
   return diffDays >= 60;
+}
+
+/**
+ * Generates an automatic payment schedule for the remaining balance.
+ * Used when recalculating payments for an existing booking that has partial payments.
+ */
+export function generateRemainingSchedule(
+  remainingAmount: number,
+  huntDateStr: string,
+  forceSinglePayment: boolean = false
+): Array<{ label: string; amount: number; dueDate: string }> {
+  if (remainingAmount <= 0) return [];
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const huntDate = new Date(huntDateStr);
+  huntDate.setHours(0, 0, 0, 0);
+
+  // 60 days before hunt
+  const sixtyBefore = new Date(huntDate);
+  sixtyBefore.setDate(sixtyBefore.getDate() - 60);
+
+  if (forceSinglePayment) {
+    return [
+      {
+        label: "Additional Balance",
+        amount: remainingAmount,
+        dueDate: toLocalDateStr(sixtyBefore),
+      },
+    ];
+  }
+
+  const schedule: Array<{ label: string; amount: number; dueDate: string }> = [];
+
+  // Find the relevant February 1st (same year as hunt)
+  const feb1 = new Date(huntDate.getFullYear(), 1, 1); // month 1 = February
+  feb1.setHours(0, 0, 0, 0);
+
+  // Check if Feb 1 falls between today (exclusive) and 60 days before hunt (exclusive)
+  const febIsRelevant =
+    feb1.getTime() > today.getTime() && feb1.getTime() < sixtyBefore.getTime();
+
+  if (febIsRelevant) {
+    const halfRemaining = Math.round(remainingAmount / 2);
+    const otherHalf = remainingAmount - halfRemaining;
+
+    schedule.push({
+      label: "February Balance (50%)",
+      amount: halfRemaining,
+      dueDate: toLocalDateStr(feb1),
+    });
+    schedule.push({
+      label: "Final Balance",
+      amount: otherHalf,
+      dueDate: toLocalDateStr(sixtyBefore),
+    });
+  } else {
+    schedule.push({
+      label: "Final Balance",
+      amount: remainingAmount,
+      dueDate: toLocalDateStr(sixtyBefore),
+    });
+  }
+
+  return schedule;
 }

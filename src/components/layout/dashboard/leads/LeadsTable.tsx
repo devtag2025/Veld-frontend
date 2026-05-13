@@ -1,6 +1,8 @@
 
+import { useState } from "react";
 import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import type { Lead } from "@/types/leads";
 
 interface LeadsTableProps {
@@ -13,7 +15,7 @@ interface LeadsTableProps {
   onView: (lead: Lead) => void;
   onDelete: (id: string) => void;
   onStatusChange: (lead: Lead, status: Lead["status"]) => void;
-  onCheckToggle: (id: string, checked: boolean) => void;
+  onCheckToggle: (id: string, field: "checked" | "checked2", value: boolean) => void;
 }
 
 type Status = "New" | "Contacted" | "Qualified" | "Converted";
@@ -37,25 +39,41 @@ const LeadRow = ({
   onDelete,
   onView,
   onStatusChange,
-  onCheckToggle,
+  isProcessing,
 }: {
   lead: Lead;
   onEdit: (lead: Lead) => void;
   onDelete: (id: string) => void;
   onView: (lead: Lead) => void;
   onStatusChange: (lead: Lead, status: Lead["status"]) => void;
-  onCheckToggle: (id: string, checked: boolean) => void;
+  onCheckToggle: (id: string, field: "checked" | "checked2", value: boolean) => void;
+  isProcessing: boolean;
 }) => (
-  <tr key={lead._id} className="hover:bg-muted/30 transition-colors">
-    <td className="p-4 w-10">
-      <input
-        type="checkbox"
-        checked={lead.checked || false}
-        onChange={() => onCheckToggle(lead._id, !lead.checked)}
-        className="h-4 w-4 rounded border-gray-300 cursor-pointer accent-primary"
-        onClick={(e) => e.stopPropagation()}
-      />
-    </td>
+  <tr
+    key={lead._id}
+    className={`hover:bg-muted/30 transition-colors ${isProcessing ? "cursor-wait pointer-events-none opacity-70" : ""}`}
+  >
+    {/* <td className="p-4 w-16">
+      <div className="flex items-center gap-1">
+        <input
+          type="checkbox"
+          checked={lead.checked || false}
+          onChange={() => onCheckToggle(lead._id, "checked", !lead.checked)}
+          className={`h-4 w-4 rounded border-gray-300 accent-primary ${isProcessing ? "cursor-wait" : "cursor-pointer"}`}
+          onClick={(e) => e.stopPropagation()}
+          disabled={isProcessing}
+        />
+        <div className="w-px h-5 bg-border mx-0.5" />
+        <input
+          type="checkbox"
+          checked={lead.checked2 || false}
+          onChange={() => onCheckToggle(lead._id, "checked2", !lead.checked2)}
+          className={`h-4 w-4 rounded border-gray-300 accent-emerald-600 ${isProcessing ? "cursor-wait" : "cursor-pointer"}`}
+          onClick={(e) => e.stopPropagation()}
+          disabled={isProcessing}
+        />
+      </div>
+    </td> */}
     <td className="p-4">{lead.name}</td>
     <td className="p-4">{lead.email}</td>
     <td className="p-4">{lead.phone}</td>
@@ -67,20 +85,19 @@ const LeadRow = ({
     </td>
     <td className="p-4">{lead.huntInterest}</td>
     <td className="p-4">
-      <select
+      <CustomSelect
         value={lead.status}
-        onChange={(e) =>
-          onStatusChange(lead, e.target.value as Lead["status"])
-        }
-        className={`px-2 py-1 rounded text-xs font-medium ${getStatusStyle(
+        onChange={(val) => onStatusChange(lead, val as Lead["status"])}
+        options={[
+          { value: "New", label: "New" },
+          { value: "Contacted", label: "Contacted" },
+          { value: "Qualified", label: "Qualified" },
+          { value: "Converted", label: "Converted" },
+        ]}
+        buttonClassName={`w-full min-w-[110px] px-2 py-1.5 rounded-md text-xs font-medium flex items-center justify-between outline-none ${getStatusStyle(
           lead.status,
         )}`}
-      >
-        <option value="New">New</option>
-        <option value="Contacted">Contacted</option>
-        <option value="Qualified">Qualified</option>
-        <option value="Converted">Converted</option>
-      </select>
+      />
     </td>
     <td className="p-4 flex justify-end gap-2">
       <button
@@ -121,6 +138,17 @@ const LeadsTable = ({
   onCheckToggle,
 }: LeadsTableProps) => {
 
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const handleCheckWithProcessing = async (id: string, field: "checked" | "checked2", value: boolean) => {
+    setProcessingId(id);
+    try {
+      await onCheckToggle(id, field, value);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const getPages = () => {
     const groupIndex = Math.floor((currentPage - 1) / PAGES_PER_GROUP);
 
@@ -142,7 +170,7 @@ const LeadsTable = ({
         <table className="min-w-[1000px] w-full text-left border-collapse">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="p-4 w-10"></th>
+              {/* <th className="p-4 w-16"></th> */}
               {[
                 "Name",
                 "Email",
@@ -172,7 +200,8 @@ const LeadsTable = ({
                 onDelete={onDelete}
                 onView={onView}
                 onStatusChange={onStatusChange}
-                onCheckToggle={onCheckToggle}
+                onCheckToggle={handleCheckWithProcessing}
+                isProcessing={processingId === lead._id}
               />
             ))}
           </tbody>

@@ -36,7 +36,6 @@ const Bookings = () => {
     bookings,
     isLoading,
     fetchBookings,
-    syncStatuses,
     sendContract,
     confirmDeposit,
     deleteBooking,
@@ -55,24 +54,8 @@ const Bookings = () => {
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
 
   const [page, setPage] = useState(1);
-  const [hasSynced, setHasSynced] = useState(false);
 
   useEffect(() => {
-    const sync = async () => {
-      const updated = await syncStatuses();
-      if (updated.length > 0) {
-        toast.success(
-          `Synced ${updated.length} contract${updated.length > 1 ? "s" : ""} — ${updated.map((u) => `${u.name}: ${u.newStatus}`).join(", ")}`,
-          { duration: 5000 },
-        );
-      }
-      setHasSynced(true);
-    };
-    sync();
-  }, []);
-
-  useEffect(() => {
-    if (!hasSynced) return;
     fetchStats();
     fetchBookings({ 
       status: statusFilter === "all" ? undefined : statusFilter, 
@@ -80,7 +63,7 @@ const Bookings = () => {
       page,
       limit: 10
     });
-  }, [search, statusFilter, page, hasSynced]);
+  }, [search, statusFilter, page]);
 
   // Reset page to 1 when filters change
   useEffect(() => {
@@ -179,12 +162,17 @@ const Bookings = () => {
     return `${paid}/${total} paid`;
   };
 
-  const handleCheckToggle = async (id: string, currentValue: boolean) => {
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const handleCheckToggle = async (id: string, field: "checked" | "checked2", currentValue: boolean) => {
+    setProcessingId(id);
     try {
-      await bookingsApi.updateBooking(id, { checked: !currentValue } as any);
+      await bookingsApi.updateBooking(id, { [field]: !currentValue } as any);
       fetchBookings();
     } catch {
       toast.error("Failed to update");
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -222,7 +210,7 @@ const Bookings = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
+          <StatCard key={stat.label} {...stat} isLoading={isLoading} />
         ))}
       </div>
 
@@ -257,7 +245,7 @@ const Bookings = () => {
       </div>
 
       <div className="bg-card border rounded-xl shadow-sm overflow-hidden min-h-[400px]">
-        {(!hasSynced || isLoading) && bookings.length === 0 ? (
+        {isLoading && bookings.length === 0 ? (
           <div className="p-16 text-center text-muted-foreground flex flex-col justify-center items-center h-[400px]">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             Loading bookings...
@@ -267,30 +255,23 @@ const Bookings = () => {
             <table className="w-full text-left border-collapse min-w-[950px]">
               <thead className="bg-muted/40 border-b">
                 <tr className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                  <th className="p-4 w-10"></th>
                   <th className="p-4">Client & Schedule</th>
                   <th className="p-4">Package</th>
                   <th className="p-4">Status</th>
+                  <th className="p-4 w-16"></th>
                   <th className="p-4">Payments</th>
                   <th className="p-4">Amount</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y text-sm">
-                {bookings.map((b) => (
+                {bookings.map((b) => {
+                  const isProcessing = processingId === b._id;
+                  return (
                   <tr
                     key={b._id}
-                    className="hover:bg-muted/20 transition-all group"
+                    className={`hover:bg-muted/20 transition-all group ${isProcessing ? "cursor-wait pointer-events-none opacity-70" : ""}`}
                   >
-                    <td className="p-4 w-10">
-                      <input
-                        type="checkbox"
-                        checked={b.checked || false}
-                        onChange={() => handleCheckToggle(b._id, b.checked)}
-                        className="h-4 w-4 rounded border-gray-300 cursor-pointer accent-primary"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </td>
                     <td className="p-4">
                       <div className="font-bold text-slate-900">{b.name}</div>
                       <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-1 font-medium">
@@ -314,6 +295,27 @@ const Bookings = () => {
                       >
                         {b.status}
                       </span>
+                    </td>
+                    <td className="p-4 w-16">
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="checkbox"
+                          checked={b.checked || false}
+                          onChange={() => handleCheckToggle(b._id, "checked", b.checked)}
+                          className={`h-4 w-4 rounded border-gray-300 accent-primary ${isProcessing ? "cursor-wait" : "cursor-pointer"}`}
+                          onClick={(e) => e.stopPropagation()}
+                          disabled={isProcessing}
+                        />
+                        <div className="w-px h-5 bg-border mx-0.5" />
+                        <input
+                          type="checkbox"
+                          checked={b.checked2 || false}
+                          onChange={() => handleCheckToggle(b._id, "checked2", b.checked2)}
+                          className={`h-4 w-4 rounded border-gray-300 accent-emerald-600 ${isProcessing ? "cursor-wait" : "cursor-pointer"}`}
+                          onClick={(e) => e.stopPropagation()}
+                          disabled={isProcessing}
+                        />
+                      </div>
                     </td>
                     <td className="p-4">
                       <div className="text-xs font-medium">
@@ -388,7 +390,7 @@ const Bookings = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )})}
 
                 {bookings.length === 0 && !isLoading && (
                   <tr>
@@ -468,7 +470,7 @@ const Bookings = () => {
   );
 };
 
-const StatCard = ({ label, value, icon: Icon, color, bg }: any) => (
+const StatCard = ({ label, value, icon: Icon, color, bg, isLoading }: any) => (
   <div className="bg-card border p-4 rounded-xl shadow-sm hover:shadow-md transition-all">
     <div className="flex items-center justify-between mb-2">
       <div className={`p-1.5 rounded-lg ${bg}`}>
@@ -478,7 +480,11 @@ const StatCard = ({ label, value, icon: Icon, color, bg }: any) => (
         {label}
       </span>
     </div>
-    <div className="text-2xl font-bold">{value}</div>
+    {isLoading ? (
+      <div className="h-8 w-16 bg-muted animate-pulse rounded mt-1"></div>
+    ) : (
+      <div className="text-2xl font-bold">{value}</div>
+    )}
   </div>
 );
 

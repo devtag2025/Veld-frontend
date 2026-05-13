@@ -6,6 +6,9 @@ import { useBookingStore } from "@/stores/booking.store";
 import type { Lead } from "@/types/leads";
 import toast from "react-hot-toast";
 import { generatePaymentSchedule, isHuntDateValid } from "@/utils/paymentSchedule";
+import { SAFARI_PACKAGES } from "@/data/safariPackages";
+import { CustomSelect } from "@/components/ui/CustomSelect";
+import type { SafariPackage } from "@/data/safariPackages";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -28,7 +31,32 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
   const [totalAmount, setTotalAmount] = useState("");
   const [note, setNote] = useState("");
   
+  // Package selection state
+  const [selectedPackageId, setSelectedPackageId] = useState("");
+  const [includeAddOn, setIncludeAddOn] = useState(false);
+
   const [paymentDraft, setPaymentDraft] = useState<any[]>([]);
+
+  // Derive the selected package object
+  const selectedPackage: SafariPackage | undefined = useMemo(
+    () => SAFARI_PACKAGES.find((p) => p.id === selectedPackageId),
+    [selectedPackageId]
+  );
+
+  // When package or add-on changes, auto-fill the total amount
+  useEffect(() => {
+    if (!selectedPackage) return;
+    let price = selectedPackage.price;
+    if (includeAddOn && selectedPackage.addOn) {
+      price += selectedPackage.addOn.price;
+    }
+    setTotalAmount(price.toString());
+  }, [selectedPackage, includeAddOn]);
+
+  // Reset add-on when switching packages
+  useEffect(() => {
+    setIncludeAddOn(false);
+  }, [selectedPackageId]);
 
   const addPaymentRow = () => {
     setPaymentDraft([
@@ -95,6 +123,8 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
     setTotalAmount("");
     setPaymentDraft([]);
     setNote("");
+    setSelectedPackageId("");
+    setIncludeAddOn(false);
   };
 
   const handleClose = () => {
@@ -139,6 +169,12 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
       }
     }
 
+    // Build add-ons array
+    const addOns: string[] = [];
+    if (selectedPackage?.addOn && includeAddOn) {
+      addOns.push(`${selectedPackage.addOn.label} (+$${selectedPackage.addOn.price.toLocaleString()})`);
+    }
+
     try {
       await createBooking({
         leadId: leadData?._id || undefined,
@@ -149,7 +185,8 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
         country: country || undefined,
         huntInterest: huntInterest || undefined,
         huntDate,
-        packageType: "",
+        packageType: selectedPackage?.name || "",
+        addOns: addOns.length > 0 ? addOns : undefined,
         firearmOptions,
         totalAmount: finalTotal,
         note: note || undefined,
@@ -271,6 +308,29 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
             Hunt Details
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Safari Package Dropdown */}
+            <div className="md:col-span-2">
+              <label className="block text-[11px] font-bold mb-1 uppercase text-muted-foreground">
+                Safari Package *
+              </label>
+              <CustomSelect
+                value={selectedPackageId}
+                onChange={setSelectedPackageId}
+                placeholder="Select a safari package..."
+                options={SAFARI_PACKAGES.map((pkg) => ({
+                  value: pkg.id,
+                  label: (
+                    <span>
+                      {pkg.name} <br className="sm:hidden" />
+                      <span className="text-muted-foreground font-medium sm:ml-1">
+                        — USD ${pkg.price.toLocaleString()}
+                      </span>
+                    </span>
+                  ),
+                }))}
+              />
+            </div>
+
             <div>
               <label className="block text-[11px] font-bold mb-1 uppercase text-muted-foreground">
                 Hunt Date *
@@ -300,6 +360,12 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
                 placeholder={paymentDraft.length > 0 ? "Calculated from schedule" : "e.g. 15000"}
                 min={0}
               />
+              {selectedPackage && (
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Auto-filled from {selectedPackage.name}
+                  {includeAddOn && selectedPackage.addOn && ` + ${selectedPackage.addOn.label}`}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-[11px] font-bold mb-1 uppercase text-muted-foreground">
@@ -337,14 +403,17 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
           {paymentDraft.map((p, idx) => (
             <div
               key={idx}
-              className="grid grid-cols-12 gap-3 items-end"
+              className="flex flex-col sm:grid sm:grid-cols-12 gap-3 sm:items-end bg-muted/20 sm:bg-transparent p-3 sm:p-0 rounded-lg sm:rounded-none mb-3 sm:mb-0 border sm:border-none"
             >
-              <div className="col-span-4">
+              <div className="sm:col-span-4">
                 {idx === 0 && (
-                  <label className="block text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                  <label className="hidden sm:block text-[10px] font-bold uppercase text-muted-foreground mb-1">
                     Description
                   </label>
                 )}
+                <label className="block sm:hidden text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                  Description
+                </label>
                 <input
                   type="text"
                   value={p.label}
@@ -355,12 +424,15 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
                   placeholder="e.g. Initial Deposit"
                 />
               </div>
-              <div className="col-span-3">
+              <div className="sm:col-span-3">
                 {idx === 0 && (
-                  <label className="block text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                  <label className="hidden sm:block text-[10px] font-bold uppercase text-muted-foreground mb-1">
                     Amount ($)
                   </label>
                 )}
+                <label className="block sm:hidden text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                  Amount ($)
+                </label>
                 <input
                   type="number"
                   value={p.amount}
@@ -372,12 +444,15 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
                   min={0}
                 />
               </div>
-              <div className="col-span-4">
+              <div className="sm:col-span-4">
                 {idx === 0 && (
-                  <label className="block text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                  <label className="hidden sm:block text-[10px] font-bold uppercase text-muted-foreground mb-1">
                     Due Date
                   </label>
                 )}
+                <label className="block sm:hidden text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                  Due Date
+                </label>
                 <input
                   type="date"
                   value={p.dueDate}
@@ -387,13 +462,13 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
                   className="w-full bg-background border rounded-lg text-sm py-2 px-3 outline-none"
                 />
               </div>
-              <div className="col-span-1 flex justify-center">
+              <div className="sm:col-span-1 flex justify-end sm:justify-center">
                 <button
                   type="button"
                   onClick={() => removePaymentRow(idx)}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer w-full sm:w-auto bg-white border sm:border-none border-red-100 sm:bg-transparent flex items-center justify-center gap-2"
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={16} /> <span className="sm:hidden text-sm">Remove</span>
                 </button>
               </div>
             </div>
@@ -416,6 +491,25 @@ const BookingModal = ({ isOpen, onClose, leadData, onBookingCreated }: BookingMo
               <p className="text-[10px] text-muted-foreground">
                 Since you haven't added manual payments, the following schedule will be auto-created:
               </p>
+
+              {/* Package-specific add-on checkbox */}
+              {selectedPackage?.addOn && (
+                <label className="flex items-center gap-2 bg-background border rounded-lg px-3 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={includeAddOn}
+                    onChange={(e) => setIncludeAddOn(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
+                  />
+                  <span className="text-sm font-medium">
+                    {selectedPackage.addOn.label}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    + ${selectedPackage.addOn.price.toLocaleString()}
+                  </span>
+                </label>
+              )}
+
               <div className="space-y-1.5">
                 {autoSchedule.map((p, idx) => (
                   <div key={idx} className="flex justify-between items-center bg-background border rounded-lg px-3 py-2">

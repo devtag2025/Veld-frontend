@@ -84,6 +84,7 @@ export interface Booking {
   notifications?: BookingNotification[];
   forms?: BookingForms;
   checked: boolean;
+  checked2: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -119,6 +120,8 @@ export interface SendContractPayload {
   country?: string;
   huntInterest?: string;
   huntDate?: string;
+  packageType?: string;
+  addOns?: string[];
   firearmOptions?: "Company Rifles" | "Bringing Own";
   totalAmount?: number;
   note?: string;
@@ -180,6 +183,8 @@ export interface ConfirmDepositResponse {
 
 export interface MarkPaidResponse {
   data: {
+    status: BookingStatus;
+    confirmedAt?: string;
     paymentSchedule: PaymentScheduleItem[];
     allPaymentsComplete: boolean;
   };
